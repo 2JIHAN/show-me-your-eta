@@ -1,94 +1,83 @@
 ---
 name: turn-eta
-description: 한 턴에 실제 작업(파일 수정, 명령 실행, 조사)이 있으면 시작 전에 몇 스텝인지와 예상 종료시각을 내고, 끝나면 실제로 걸린 시간을 기록해 다음 예상을 더 맞게 만든다. 대화만 하는 턴에는 쓰지 않는다.
+description: When a turn contains real work (editing files, running commands, digging through code), split it into steps, tell the user how many and when it will be done, time each step, and record the miss so the next estimate is closer. Skip it on conversation-only turns.
 ---
 
-# turn-eta — 이번 턴 얼마나 걸릴지 미리 말하기
+# turn-eta — say when this turn will be done, then learn from what it took
 
-작업을 시작하기 전에 "몇 스텝짜리고 몇 시에 끝날 것 같다"를 먼저 말하고, 끝나면 실제로 몇 분 걸렸는지를 남긴다. 그 기록이 쌓일수록 예상이 실제에 가까워진다.
+Before the work starts, say how many steps it is and when it will be finished. Time each step as it
+lands. When the turn ends, write down what it really took. The next estimate reads that log.
 
-## 언제 도나
+## When this runs
 
-**한 세션의 모든 턴 중, 실제 작업이 있는 턴마다.** 작업이란 파일을 고치거나, 명령을 돌리거나, 코드를 뒤져 조사하는 것.
+**Every turn that contains real work** — editing a file, running a command, searching the codebase.
 
-- 작업이 있는 턴 → 작업을 시작하기 **전에** `plan`을 부르고, 그 턴 답변 **맨 마지막 문단**에 `예상 종료시각: 17:45`를 따로 한 줄로 적는다. 작업이 끝나면 `done`을 부른다.
-- 대화만 하는 턴(질문에 답만 하거나, 무엇을 할지 의논만 하는 턴) → 아무것도 안 한다. 시끄럽기만 하다.
-- 스텝이 하나뿐인 잔손질(한 줄 고치기 같은)도 굳이 돌리지 않는다.
+- Work in the turn → call `plan` **before** starting, put `ETA: 17:45` as its own final paragraph in
+  your reply, call `step` as each step lands, call `done` when the turn's work is finished.
+- Conversation-only turn (answering a question, deciding what to build) → do nothing. It is noise.
+- A one-line fix is not worth the ceremony either. Use it when there is more than one step.
 
-## 어떻게 쓰나
+## Commands
 
-스크립트는 `scripts/eta.js`, 순수 node라 설치할 게 없다. 이 스킬 폴더 기준 경로로 부른다.
+Pure Node, no install. Call it from wherever the skill is installed.
 
-**1. 작업 시작 전 — 몇 스텝인지 세고 예상을 낸다**
+```bash
+# before the work — count the steps and get an ETA
+node <skill>/scripts/eta.js plan 4 --provider anthropic --model claude-opus-5 --size M
 
-```
-node <스킬폴더>/scripts/eta.js plan 4 --model claude-opus-5 --provider anthropic --size M
-```
+# 4 steps, ~14 min (3.5 min/step from anthropic/claude-opus-5 M, 6 turns)
+# ETA: 17:45
+# (last 6 estimates ran 3 min long)
 
-**부르는 쪽이 자기 모델 이름과 작업 크기를 인자로 넘겨야 한다.** 셸은 지금 어느 모델이 도는지 알 길이 없거든. 안 넘기면 `unknown`으로 쌓이고, 그러면 모델별 보정이 안 된다.
+# each time a step lands — measured, and the rest is re-forecast from the measured pace
+node <skill>/scripts/eta.js step
+# step 2/4 done in 4.1 min (3.8 min/step so far)
+# ETA: 17:49
 
-- `--model` — 지금 이 턴을 돌리는 모델 이름 그대로. 예 `claude-opus-5`, `gemini-3-pro`
-- `--provider` — 예 `anthropic`. 모델 이름에서 짐작되더라도 따로 적는다
-- `--size` — `S`(잔손질) / `M`(보통) / `L`(덩어리 큰 일) 셋만. 안 주면 `M`
+# when the turn's work is done
+node <skill>/scripts/eta.js done
+# estimated 14 min / actual 17 min (3 min short)
 
-찍히는 것:
-
-```
-4스텝 예정, 예상 13분 (스텝당 3.2분, 이 모델·M 기록 5건)
-예상 종료시각: 17:45
-(지난 6번 예상은 3분 낙관적)
-```
-
-괄호 안이 **이번 예상을 무엇에 기대서 냈는지**다. `기본값 0건`이면 아직 기록이 없다는 뜻.
-
-이 중 `예상 종료시각: 17:45` 한 줄을 답변 맨 마지막 문단에 그대로 옮겨 적는다. 앞에 "4스텝 예정" 같은 말은 턴을 시작하는 문장에 자연스럽게 섞으면 돼.
-
-**2. 그 턴의 작업이 끝나면**
-
-```
-node <스킬폴더>/scripts/eta.js done
+# what the log says right now
+node <skill>/scripts/eta.js stats
 ```
 
-```
-예상 13분 / 실제 21분 (8분 낙관적)
-```
+**You must pass your own `--provider` and `--model`.** A shell cannot see which model is driving it.
+Use the identifiers you know yourself by — `--provider anthropic --model claude-opus-5`,
+`--provider openai --model gpt-5-codex`, `--provider google --model gemini-3-pro`. Anything missing
+lands under `unknown/unknown`, which still works but pools every model together.
 
-id를 안 주면 마지막으로 연 기록을 닫는다. 여러 개가 겹칠 일이 있으면 `plan`이 준 id를 `done <id>`로 넘긴다.
+`--size` is `S` (small fix), `M` (normal, the default), or `L` (large chunk). Rough is fine; it only
+keeps small turns from dragging the average of large ones.
 
-**3. 지금 보정치가 궁금하면**
-
-```
-node <스킬폴더>/scripts/eta.js stats --model claude-opus-5 --size M
-```
-
-## 예상이 정확해지는 방식
-
-좁은 것부터 넓은 것으로 내려간다. **끝낸 기록이 3건 이상**인 첫 칸에서 멈춘다.
-
-1. 이 프로젝트 로그에서 같은 모델 + 같은 크기
-2. 같은 모델 전체
-3. 이 프로젝트 로그 전체
-4. `TURN_ETA_LOG`로 공용 로그를 걸어 뒀으면 거기서 같은 순서로 한 번 더
-5. 다 얇으면 기본값(스텝당 4분)
-
-- 쓰는 값은 평균이 아니라 **스텝당 실제 소요의 중앙값**이다. 어쩌다 한 번 오래 걸린 턴이 전체를 밀어 올리지 않게.
-- 최근 20건까지만 본다. 옛날 습관이 계속 발목 잡지 않게.
-- 칸이 비어 있는 옛 줄은 1·2단에서 빠지고 3단에서만 쓰인다.
-
-## 기록이 쌓이는 곳
-
-`<프로젝트 루트>/.eta/log.tsv` — 지금 폴더에서 위로 올라가며 가장 가까운 `.git`이 있는 데를 루트로 잡는다. 저장소가 아니면 지금 폴더.
-
-프로젝트 안에 두는 이유는 둘이야. 권한을 프로젝트 밖으로 못 나가게 막아 둔 세션에서도 읽혀야 되먹임이 살고, 이 스킬이 클로드 말고 다른 에이전트한테도 깔리니까 벤더 폴더에 묶으면 안 되거든.
-
-`.eta/`는 리포의 `.gitignore`에 넣어 두자. 턴마다 줄이 늘고, 내 컴퓨터에서 잰 속도라 남한테 맞지도 않는다.
-
-`--log <경로>`로 다른 파일을 쓸 수 있고, `--project <이름>`으로 프로젝트 이름을 직접 줄 수도 있다(기본은 루트 폴더 이름). 여러 프로젝트가 기록을 나눠 쓰게 하려면 환경변수 `TURN_ETA_LOG`에 공용 로그 경로를 준다 — 위 사다리 4단에서만 읽는다.
-
-## 확인
+## Where the log lives
 
 ```
-node <스킬폴더>/scripts/eta.js --selftest
+<project root>/.eta/<provider>/<model>/log.tsv
 ```
 
-`자체검증 통과`가 찍히면 된 거야.
+Inside the project, so an agent whose permissions stop at its working directory can still read its own
+history. Project root is the nearest `.git` going up, otherwise the current directory. Provider and
+model are folders, so one model's pace never quietly becomes another's.
+
+Add `.eta/` to `.gitignore`. It is a measurement of your machine on your turns; it means nothing to
+anyone else and it changes on every turn.
+
+Set `TURN_ETA_DIR` to another `.eta` directory to share history across projects. It is only consulted
+when the local log is too thin to say anything.
+
+## How the estimate gets better
+
+`done` records the estimate, the actual, and the per-step times. `plan` reads them back and takes the
+**median minutes per step**, walking from the narrowest match outward and stopping at the first rung
+with at least 3 finished turns:
+
+1. this provider + model + same size
+2. this provider + model
+3. this provider, any model
+4. everything in this project's `.eta`
+5. the shared log in `TURN_ETA_DIR`, same order
+6. otherwise 4 minutes per step
+
+Median rather than mean, so one turn that ran long does not drag every future estimate with it. Only
+the last 20 turns per rung count. `plan` prints which rung it used, so the number is never a mystery.
