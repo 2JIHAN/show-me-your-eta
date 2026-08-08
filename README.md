@@ -219,14 +219,8 @@ TXT
 exit 0
 ```
 
-A reminder is only text, and nothing checks that it was followed — a turn can call `plan`, keep the
-output to itself, never call `done`, and from the outside look like the skill never ran. The skill
-ships `hooks/eta-gate.js` to close that hole. It stops the first `Edit` or `Write` of each prompt
-while no plan exists, says what the two answers are, and lets the retry through either way.
-
-It never decides for the agent — a shell script cannot tell a four-step refactor from a typo fix —
-and it never stops the same prompt twice. Reading the codebase is not gated either: `Bash` is in the
-matcher so the hook can *see* `plan` being called, not to block commands.
+A reminder is only text. `hooks/eta-gate.js` ships with the skill and stops the first `Edit` or
+`Write` of a prompt while no plan exists — once, and the retry goes through either way.
 
 Register both in `.claude/settings.json`:
 
@@ -248,11 +242,7 @@ Register both in `.claude/settings.json`:
 }
 ```
 
-Both events matter. `UserPromptSubmit` is what opens the gate again for the next prompt, so
-registering only `PreToolUse` leaves a gate that never closes — and one that never opens.
-
-Restart Claude Code for the hooks to take effect. Check them without a session:
-`node turn-eta/hooks/eta-gate.js --selftest`.
+Restart Claude Code for the hooks to take effect.
 
 </details>
 
