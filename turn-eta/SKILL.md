@@ -28,6 +28,7 @@ node <skill>/scripts/eta.js plan 4 --provider anthropic --model claude-opus-5 --
 # 4 steps, ~14 min (3.5 min/step from anthropic/claude-opus-5 M, 6 turns)
 # ETA: 17:45
 # (last 6 estimates ran 3 min long)
+# turn id: 48i35qek
 
 # each time a step lands — measured, and the rest is re-forecast from the measured pace
 node <skill>/scripts/eta.js step
@@ -49,6 +50,10 @@ lands under `unknown/unknown`, which still works but pools every model together.
 
 `--size` is `S` (small fix), `M` (normal, the default), or `L` (large chunk). Rough is fine; it only
 keeps small turns from dragging the average of large ones.
+
+`plan` prints a turn id. Pass it to `step` and `done` — `step 48i35qek` — whenever another agent might
+be working in the same project, or you are running more than one turn at a time. Without an id they
+follow the newest turn opened here, and ignore anything older than four hours as abandoned.
 
 ## Where the log lives
 

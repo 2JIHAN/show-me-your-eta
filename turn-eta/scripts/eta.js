@@ -209,6 +209,7 @@ function plan(opt, steps, now = Date.now()) {
     etaLine(now + est * MS),
   ]
   if (b) out.push(`(last ${b.n} estimates ran ${Math.abs(b.off)} min ${b.off > 0 ? 'long' : 'short'})`)
+  out.push(`turn id: ${id}`)
   return { id, est, text: out.join('\n') }
 }
 
@@ -219,17 +220,24 @@ const openRows = (rows) => rows.filter((r) => r.state === 'open')
 function activeLog(opt) {
   if (opt.explicit) return logPathFor(opt.root, opt.provider, opt.model)
   const open = scan(opt.root)
-    .map((f) => ({ file: f.file, rows: openRows(load(f.file)) }))
+    .map((f) => ({ file: f.file, rows: openRows(load(f.file)).filter((r) => Date.now() - Date.parse(r.start) < STALE_MS) }))
     .filter((f) => f.rows.length)
     .sort((a, b) => Date.parse(a.rows[a.rows.length - 1].start) - Date.parse(b.rows[b.rows.length - 1].start))
     .pop()
   return open ? open.file : logPathFor(opt.root, opt.provider, opt.model)
 }
 
-function pick(rows, id) {
+// A turn older than this was abandoned — don't let it hijack the next step.
+const STALE_MS = 4 * 60 * MS
+
+function pick(rows, id, now = Date.now()) {
   const open = openRows(rows)
   if (id) return open.find((r) => r.id === id) || null
-  return open.length ? open[open.length - 1] : null
+  // newest first, and never reach for one that has gone stale
+  const fresh = open
+    .filter((r) => now - Date.parse(r.start) < STALE_MS)
+    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
+  return fresh.length ? fresh[fresh.length - 1] : null
 }
 
 // One step done: measure what it actually took and re-forecast the rest from that pace.
@@ -258,7 +266,7 @@ function step(opt, id, now = Date.now()) {
 function done(opt, id, now = Date.now()) {
   const file = activeLog(opt)
   const rows = load(file)
-  const row = pick(rows, id)
+  const row = pick(rows, id, now)
   if (!row) throw new Error('no open turn to close')
 
   const actual = Math.max(1, Math.round((now - Date.parse(row.start)) / MS))
@@ -423,6 +431,14 @@ function selftest() {
   const followed = step(bare, undefined, t0 + MS)
   assert.strictEqual(followed.id, opened.id, 'step without flags must follow the open turn')
   assert.strictEqual(done(bare, undefined, t0 + 2 * MS).id, opened.id)
+
+  // an abandoned turn must not hijack the next step
+  const stale = plan(o(), 9, t0 - 5 * 60 * MS)
+  const fresh = plan(o(), 2, t0)
+  assert.strictEqual(step(o(), undefined, t0 + MS).id, fresh.id, 'step must follow the fresh turn')
+  assert.strictEqual(done(o(), stale.id, t0 + MS).id, stale.id, 'a named id still works')
+  done(o(), fresh.id, t0 + MS)
+  assert.ok(fresh.text.includes('turn id: '), fresh.text)
 
   // closing without an open turn is an error, not a silent no-op
   assert.throws(() => step({ ...o(), root: path.join(tmp, 'empty') }, undefined, t0), /no open turn/)
