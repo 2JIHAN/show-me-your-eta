@@ -239,18 +239,22 @@ const STALE_MS = 4 * 60 * MS
 function pick(rows, id, now = Date.now()) {
   const open = openRows(rows)
   if (id) return open.find((r) => r.id === id) || null
-  // newest first, and never reach for one that has gone stale
   const fresh = open
     .filter((r) => now - Date.parse(r.start) < STALE_MS)
     .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
-  return fresh.length ? fresh[fresh.length - 1] : null
+  // Two agents in one project would otherwise close each other's turns. Guessing here
+  // corrupts both logs silently, so refuse and make the caller name the one it opened.
+  if (fresh.length > 1) {
+    throw new Error(`${fresh.length} turns are open here — pass the id: ${fresh.map((r) => r.id).join(', ')}`)
+  }
+  return fresh.length ? fresh[0] : null
 }
 
 // One step done: measure what it actually took and re-forecast the rest from that pace.
 function step(opt, id, now = Date.now()) {
   const file = activeLog(opt)
   const rows = load(file)
-  const row = pick(rows, id)
+  const row = pick(rows, id, now)
   if (!row) throw new Error('no open turn to step — run plan first')
 
   const spent = (now - Date.parse(row.start)) / MS
@@ -447,6 +451,14 @@ function selftest() {
   const followed = step(bare, undefined, t0 + MS)
   assert.strictEqual(followed.id, opened.id, 'step without flags must follow the open turn')
   assert.strictEqual(done(bare, undefined, t0 + 2 * MS).id, opened.id)
+
+  // two open turns at once: guessing is worse than stopping
+  const a1 = plan(o(), ['a'], t0)
+  const a2 = plan(o({ size: 'L' }), ['b'], t0)
+  assert.throws(() => step(o(), undefined, t0 + MS), /pass the id/)
+  assert.strictEqual(step(o(), a1.id, t0 + MS).id, a1.id, 'a named id still works with two open')
+  done(o(), a1.id, t0 + MS)
+  done(o(), a2.id, t0 + MS)
 
   // an abandoned turn must not hijack the next step
   const stale = plan(o(), Array.from({ length: 9 }, (_, i) => `s${i}`), t0 - 5 * 60 * MS)

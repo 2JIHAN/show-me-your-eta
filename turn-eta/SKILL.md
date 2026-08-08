@@ -14,8 +14,8 @@ that log.
 **Every turn that contains real work** — editing a file, running a command, searching the codebase.
 
 - Work in the turn → call `plan` **before** starting, open your reply with the numbered plan it prints,
-  put `ETA: 17:45` as its own final paragraph, call `step` as each step lands, and call `done` when the
-  turn's work is finished.
+  put `ETA: 17:45` as its own final paragraph, call `step <id>` as each step lands, and call
+  `done <id>` when the turn's work is finished.
 - Conversation-only turn (answering a question, deciding what to build) → do nothing. It is noise.
 - A one-line fix is not worth the ceremony either. Use it when there is more than one step.
 
@@ -40,12 +40,12 @@ node <skill>/scripts/eta.js plan \
 # turn id: 48i35qek
 
 # each time a step lands — measured, and the rest is re-forecast from the measured pace
-node <skill>/scripts/eta.js step
+node <skill>/scripts/eta.js step 48i35qek
 # step 2/4 done in 4.1 min — fix the date parser (3.8 min/step so far) (next: update the fixtures)
 # ETA: 17:49
 
 # when the turn's work is done
-node <skill>/scripts/eta.js done
+node <skill>/scripts/eta.js done 48i35qek
 # estimated 14 min / actual 17 min (3 min short)
 
 # what the log says right now
@@ -64,9 +64,10 @@ lands under `unknown/unknown`, which still works but pools every model together.
 `--size` is `S` (small fix), `M` (normal, the default), or `L` (large chunk). Rough is fine; it only
 keeps small turns from dragging the average of large ones.
 
-`plan` prints a turn id. Pass it to `step` and `done` — `step 48i35qek` — whenever another agent might
-be working in the same project, or you are running more than one turn at a time. Without an id they
-follow the newest turn opened here, and ignore anything older than four hours as abandoned.
+**Always pass the turn id.** `plan` prints one; carry it through every `step` and the final `done` —
+`step 48i35qek`, `done 48i35qek`. Another agent working in the same project writes to the same log, and
+an id-less call can close its turn instead of yours. If two turns are open and no id is given, the
+script refuses rather than guess. A turn nobody has touched for four hours counts as abandoned.
 
 ## Where the log lives
 

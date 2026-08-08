@@ -223,8 +223,9 @@ Without it the skill still triggers on its own description; it just fires less o
 **What if the agent forgets to call `done`?** The turn stays open and is ignored by every estimate.
 After four hours it is treated as abandoned.
 
-**Two agents in one project?** `plan` prints a turn id — pass it to `step` and `done` and they stay out
-of each other's way.
+**Two agents in one project?** `plan` prints a turn id and the skill tells the agent to carry it through
+every call. If two turns are open and a call arrives without an id, the script refuses instead of closing
+the wrong one.
 
 **Do I have to run anything myself?** No. The agent reads the skill and calls the script. The only
 commands you type are the install and, if you contribute, the self-test.
