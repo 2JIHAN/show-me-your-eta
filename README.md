@@ -89,7 +89,7 @@ echo ".eta/" >> .gitignore
 3. update the fixtures
 4. re-run the suite
 
-ETA: 17:45
+ETA: 17:45 (14 min)
 ```
 
 Both land before the work starts, so you can cut step 3 while cutting it is still free.

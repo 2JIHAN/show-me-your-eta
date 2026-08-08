@@ -237,7 +237,7 @@ function plan(opt, names, now = Date.now()) {
     '',
     `${steps} steps, ~${est} min (${round1(p.min)} min/step from ${p.from}, ${p.n} turns)`,
     '',
-    etaLine(now + est * MS),
+    `${etaLine(now + est * MS)} (${est} min)`,
     '',
   ]
   if (b) out.push(`(last ${b.n} estimates ran ${Math.abs(b.off)} min ${b.off > 0 ? 'long' : 'short'})`)
@@ -453,6 +453,7 @@ function selftest() {
   const planLines = first.text.split('\n')
   const etaAt = planLines.findIndex((l) => l.startsWith('ETA:'))
   assert.ok(etaAt > 0 && planLines[etaAt - 1] === '' && planLines[etaAt + 1] === '', first.text)
+  assert.ok(/^ETA: \d\d:\d\d \(12 min\)$/.test(planLines[etaAt]), planLines[etaAt]) // how long, not just when
 
   // steps are measured one by one and the forecast follows the measured pace
   const s1 = step(o(), first.id, t0 + 2 * MS)

@@ -43,7 +43,7 @@ node <skill>/scripts/eta.js plan \
 #
 # 4 steps, ~14 min (3.5 min/step from anthropic/claude-opus-5 M, 6 turns)
 #
-# ETA: 17:45
+# ETA: 17:45 (14 min)
 #
 # (last 6 estimates ran 3 min long)
 # turn id: 48i35qek
