@@ -214,6 +214,18 @@ function plan(opt, steps, now = Date.now()) {
 
 const openRows = (rows) => rows.filter((r) => r.state === 'open')
 
+// `plan` is told the provider and model; `step` and `done` should not have to repeat them.
+// Without the flags, follow the most recently opened turn in this project.
+function activeLog(opt) {
+  if (opt.explicit) return logPathFor(opt.root, opt.provider, opt.model)
+  const open = scan(opt.root)
+    .map((f) => ({ file: f.file, rows: openRows(load(f.file)) }))
+    .filter((f) => f.rows.length)
+    .sort((a, b) => Date.parse(a.rows[a.rows.length - 1].start) - Date.parse(b.rows[b.rows.length - 1].start))
+    .pop()
+  return open ? open.file : logPathFor(opt.root, opt.provider, opt.model)
+}
+
 function pick(rows, id) {
   const open = openRows(rows)
   if (id) return open.find((r) => r.id === id) || null
@@ -222,7 +234,7 @@ function pick(rows, id) {
 
 // One step done: measure what it actually took and re-forecast the rest from that pace.
 function step(opt, id, now = Date.now()) {
-  const file = logPathFor(opt.root, opt.provider, opt.model)
+  const file = activeLog(opt)
   const rows = load(file)
   const row = pick(rows, id)
   if (!row) throw new Error('no open turn to step — run plan first')
@@ -244,7 +256,7 @@ function step(opt, id, now = Date.now()) {
 }
 
 function done(opt, id, now = Date.now()) {
-  const file = logPathFor(opt.root, opt.provider, opt.model)
+  const file = activeLog(opt)
   const rows = load(file)
   const row = pick(rows, id)
   if (!row) throw new Error('no open turn to close')
@@ -284,14 +296,15 @@ function parseArgs(argv) {
     provider: 'unknown',
     model: 'unknown',
     size: 'M',
+    explicit: false,
     root: null,
     shared: process.env.TURN_ETA_DIR || null,
   }
   const rest = []
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
-    if (a === '--provider') opt.provider = argv[++i]
-    else if (a === '--model') opt.model = argv[++i]
+    if (a === '--provider') (opt.provider = argv[++i]), (opt.explicit = true)
+    else if (a === '--model') (opt.model = argv[++i]), (opt.explicit = true)
     else if (a === '--size') opt.size = String(argv[++i] || 'M').toUpperCase()
     else if (a === '--dir') opt.root = argv[++i]
     else if (a.startsWith('-')) continue
@@ -403,6 +416,13 @@ function selftest() {
   const borrowed = plan({ ...o(), root: other, shared: root }, 3, t0)
   assert.ok(borrowed.text.includes('shared anthropic/claude-opus-5'), borrowed.text)
   done({ ...o(), root: other, shared: root }, borrowed.id, t0 + MS)
+
+  // step and done without --provider/--model follow the most recent open turn
+  const bare = { provider: 'unknown', model: 'unknown', size: 'M', root, shared: null, explicit: false }
+  const opened = plan(o(), 2, t0)
+  const followed = step(bare, undefined, t0 + MS)
+  assert.strictEqual(followed.id, opened.id, 'step without flags must follow the open turn')
+  assert.strictEqual(done(bare, undefined, t0 + 2 * MS).id, opened.id)
 
   // closing without an open turn is an error, not a silent no-op
   assert.throws(() => step({ ...o(), root: path.join(tmp, 'empty') }, undefined, t0), /no open turn/)
