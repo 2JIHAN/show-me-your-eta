@@ -14,7 +14,7 @@ estimate reads that log.
 **Every turn that contains real work** — editing a file, running a command, searching the codebase.
 
 - Work in the turn → call `plan` **before** starting and open your reply with the numbered plan it
-  prints, **including its `ETA:` line**. The plan is what the reader checks before the work happens, and
+  prints, **including its `ETA:` line, kept as its own paragraph**. The plan is what the reader checks before the work happens, and
   a plan without a finish time is half a plan. Call `step <id>` as each step lands, and `done <id>` when
   the turn's work is finished.
 - **The last paragraph is a time too, and which time depends on whether anything is still running.**
@@ -42,13 +42,16 @@ node <skill>/scripts/eta.js plan \
 # 4. re-run the suite
 #
 # 4 steps, ~14 min (3.5 min/step from anthropic/claude-opus-5 M, 6 turns)
+#
 # ETA: 17:45
+#
 # (last 6 estimates ran 3 min long)
 # turn id: 48i35qek
 
 # each time a step lands — measured, and the rest is re-forecast from the measured pace
 node <skill>/scripts/eta.js step 48i35qek
 # 2/4 fix the date parser — 8m 06s
+#
 # **ETA 17:49** (4 min later)
 
 # when the turn's work is done

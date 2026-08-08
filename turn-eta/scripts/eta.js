@@ -236,7 +236,9 @@ function plan(opt, names, now = Date.now()) {
     ...names.map((n, i) => `${i + 1}. ${n}`),
     '',
     `${steps} steps, ~${est} min (${round1(p.min)} min/step from ${p.from}, ${p.n} turns)`,
+    '',
     etaLine(now + est * MS),
+    '',
   ]
   if (b) out.push(`(last ${b.n} estimates ran ${Math.abs(b.off)} min ${b.off > 0 ? 'long' : 'short'})`)
   out.push(`turn id: ${id}`)
@@ -306,6 +308,7 @@ function step(opt, id, now = Date.now()) {
     moved === 0 ? 'on track' : `${Math.abs(moved)} min ${moved > 0 ? 'later' : 'earlier'}`
   const text = [
     `${doneSteps}/${row.steps} ${row.names[doneSteps - 1] ?? ''} — ${hms(row.stepMins[doneSteps - 1])}`,
+    '',
     left ? `**ETA ${clock(eta)}** (${drift})` : `last step — wrap up and run done`,
   ].join('\n')
 
@@ -447,12 +450,16 @@ function selftest() {
   assert.strictEqual(first.est, 12)
   assert.ok(/ETA: \d\d:\d\d/.test(first.text), first.text)
   assert.ok(first.text.startsWith('1. read the test\n2. fix the parser\n3. re-run\n'), first.text)
+  const planLines = first.text.split('\n')
+  const etaAt = planLines.findIndex((l) => l.startsWith('ETA:'))
+  assert.ok(etaAt > 0 && planLines[etaAt - 1] === '' && planLines[etaAt + 1] === '', first.text)
 
   // steps are measured one by one and the forecast follows the measured pace
   const s1 = step(o(), first.id, t0 + 2 * MS)
-  assert.strictEqual(s1.text.split('\n').length, 2, s1.text) // the step, then the eta on its own line
+  assert.strictEqual(s1.text.split('\n').length, 3, s1.text) // the step, a blank, then the eta alone
+  assert.strictEqual(s1.text.split('\n')[1], '', s1.text)
   assert.strictEqual(s1.text.split('\n')[0], '1/3 read the test — 2m 00s', s1.text)
-  assert.ok(/^\*\*ETA \d\d:\d\d\*\* \((on track|\d+ min (earlier|later))\)$/.test(s1.text.split('\n')[1]), s1.text)
+  assert.ok(/^\*\*ETA \d\d:\d\d\*\* \((on track|\d+ min (earlier|later))\)$/.test(s1.text.split('\n')[2]), s1.text)
   const s2 = step(o(), first.id, t0 + 4 * MS)
   assert.ok(s2.text.startsWith('2/3 fix the parser — 2m 00s'), s2.text)
 
