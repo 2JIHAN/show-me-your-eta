@@ -149,11 +149,12 @@ Three pieces:
 ```
 
 One tab-separated row per turn — the steps by name, the estimate, the actual, and how long each step
-ran:
+ran. Times are written in the machine's own zone with the offset attached, so they line up with the
+clock the agent printed and still resolve to the right instant if the file moves:
 
 ```
-# id     start                 steps  est_min  end                   actual_min  state  size  step_mins        step_names
-48i35qek 2026-08-08T06:39:57Z  4      14       2026-08-08T06:56:44Z  17          done   M     4.1,3.2,5.0,4.7  reproduce|fix parser|fixtures|re-run
+# id     start                     steps  est_min  end                       actual_min  state  size  step_mins        step_names
+48i35qek 2026-08-08T15:39:57+09:00  4  14  2026-08-08T15:56:44+09:00  17  done  M  4.1,3.2,5.0,4.7  reproduce|fix parser|fixtures|re-run
 ```
 
 It lives **inside the project**, split by **provider and model**, for two reasons:

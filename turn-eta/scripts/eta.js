@@ -177,7 +177,16 @@ const clock = (ms) => {
   const d = new Date(ms)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
-const iso = (ms) => new Date(ms).toISOString()
+// Local time with its offset, not UTC. The clock line above is local, and a log whose rows read
+// six hours off from it is a log nobody trusts. The offset keeps it exact if the file travels.
+const iso = (ms) => {
+  const d = new Date(ms)
+  const off = -d.getTimezoneOffset()
+  const p2 = (n) => String(Math.abs(Math.trunc(n))).padStart(2, '0')
+  const date = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
+  const time = `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`
+  return `${date}T${time}${off < 0 ? '-' : '+'}${p2(off / 60)}:${p2(off % 60)}`
+}
 const etaLine = (ms) => `ETA: ${clock(ms)}`
 
 // ---------- commands ----------
@@ -378,6 +387,11 @@ function selftest() {
   const root = path.join(tmp, '.eta')
   const t0 = Date.parse('2026-08-08T10:00:00Z')
   const o = (over = {}) => ({ provider: 'anthropic', model: 'claude-opus-5', size: 'M', root, shared: null, ...over })
+
+  // 시각은 오프셋을 달고 저장된다 — 왕복해도 같은 순간이어야 한다
+  const stamped = iso(t0)
+  assert.ok(/[+-]\d\d:\d\d$/.test(stamped), stamped)
+  assert.strictEqual(Date.parse(stamped), t0)
 
   // folders, not columns
   const f = logPathFor(root, 'Anthropic', 'claude-opus-5[1m]')
