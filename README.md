@@ -94,12 +94,15 @@ ETA: 17:45
 
 Both land before the work starts, so you can cut step 3 while cutting it is still free.
 
-**5. It reports as each step lands**
+**5. Each step is timed as it lands, and the rest is re-forecast**
 
 ```
 step 2/4 done in 4.1 min — fix the date parser (3.8 min/step so far) (next: update the fixtures)
 ETA: 17:49
 ```
+
+Step 1 ran long, so the finish time moved. Whether you watch this happen or only see it at the end
+depends on your agent — most send one message per turn.
 
 **6. When it finishes, you get the real time and where it went**
 
@@ -133,14 +136,14 @@ model you actually run.
 
 ## How it works
 
-Three pieces:
+Four pieces:
 
 | | |
 |---|---|
-| **Commit** | Before touching anything, the agent names the steps and prints a finish time as the last line of its reply. A bare step count is refused. |
+| **Commit** | Before touching anything, the agent names the steps and opens its reply with the numbered plan and a finish time. A bare step count is refused. |
 | **Measure** | Each finished step is timed and the remainder is re-forecast from the measured pace — not from the original guess. |
 | **Learn** | The estimate and the actual land in a log. The next estimate is the median of what really happened. |
-| **Close honestly** | When the work is finished the reply ends with the finish time, not with an ETA the clock already disproved. |
+| **Close honestly** | The reply ends with the finish time and the per-step table, not with an ETA the clock already disproved. |
 
 ### What it writes down
 
@@ -201,7 +204,15 @@ Save this as `.claude/hooks/inject-turn-eta.sh`:
 #!/bin/sh
 S="$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta"
 [ -f "$S/SKILL.md" ] || exit 0
-echo "If this turn contains real work, follow $S/SKILL.md — plan before starting, the ETA as the last paragraph of the reply, step as each step lands, done at the end."
+E="node $S/scripts/eta.js"
+cat <<TXT
+If this turn contains real work, follow $S/SKILL.md.
+
+- Before starting: \`$E plan "first step" "second step" … --provider <p> --model <m> --size S|M|L\`
+- Open the reply with the numbered list and the \`ETA:\` line it prints
+- \`$E step <turn id>\` as each step lands, \`$E done <turn id>\` at the end — the id is required
+- Close the reply with what \`done\` prints: the finish line and the per-step table
+TXT
 exit 0
 ```
 
@@ -228,8 +239,9 @@ Anything with a per-turn instruction file works — `AGENTS.md`, `GEMINI.md`, a 
 file. One line is enough:
 
 ```
-When a turn contains real work, follow the turn-eta skill: plan before starting,
-the ETA as the last paragraph of the reply, step as each step lands, done at the end.
+When a turn contains real work, follow the turn-eta skill: plan the steps by name before
+starting, open the reply with the numbered plan and its ETA, call step <id> as each step
+lands, and close with what done prints.
 ```
 
 Without it the skill still triggers on its own description; it just fires less often.
@@ -238,7 +250,8 @@ Without it the skill still triggers on its own description; it just fires less o
 
 ## FAQ
 
-**Does it slow anything down?** No. Three short Node calls per turn, no network, no dependencies.
+**Does it slow anything down?** No. A handful of short Node calls per turn, no network, no
+dependencies.
 
 **What if the agent forgets to call `done`?** The turn stays open and is ignored by every estimate.
 After four hours it is treated as abandoned.
