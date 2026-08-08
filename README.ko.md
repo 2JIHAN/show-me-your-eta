@@ -221,13 +221,24 @@ TXT
 exit 0
 ```
 
-`.claude/settings.json`에 등록합니다.
+밀어 넣는 건 텍스트일 뿐입니다. 스킬에 같이 딸려 오는 `hooks/eta-gate.js`가 계획 없는 입력의 첫
+`Edit`·`Write`를 한 번 막습니다. 한 번뿐이고, 재시도는 어느 쪽이든 통과합니다.
+
+`.claude/settings.json`에 둘 다 등록합니다.
 
 ```json
 {
   "hooks": {
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/inject-turn-eta.sh\"" }] }
+      { "hooks": [
+        { "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/inject-turn-eta.sh\"" },
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Edit|Write|Bash", "hooks": [
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
     ]
   }
 }

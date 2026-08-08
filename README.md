@@ -219,19 +219,30 @@ TXT
 exit 0
 ```
 
-Register it in `.claude/settings.json`:
+A reminder is only text. `hooks/eta-gate.js` ships with the skill and stops the first `Edit` or
+`Write` of a prompt while no plan exists — once, and the retry goes through either way.
+
+Register both in `.claude/settings.json`:
 
 ```json
 {
   "hooks": {
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/inject-turn-eta.sh\"" }] }
+      { "hooks": [
+        { "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/inject-turn-eta.sh\"" },
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Edit|Write|Bash", "hooks": [
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
     ]
   }
 }
 ```
 
-Restart Claude Code for the hook to take effect.
+Restart Claude Code for the hooks to take effect.
 
 </details>
 
