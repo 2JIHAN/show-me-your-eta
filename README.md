@@ -14,8 +14,8 @@ English · [한국어](README.ko.md)
 
 ---
 
-Agents are happy to work for twenty minutes without telling you it will be twenty minutes. This skill makes them
-name a number before they start, then checks that number against the clock.
+Agents are happy to work for twenty minutes without telling you it will be twenty minutes. This skill
+makes them lay out the steps and a finish time first, then checks that time against the clock.
 
 <table>
 <tr><th>Without it</th><th>With it</th></tr>
@@ -31,7 +31,10 @@ name a number before they start, then checks that number against the clock.
 
 </td><td>
 
-> Four steps: read the failing test, fix the parser, update the fixtures, re-run the suite.
+> 1. reproduce the failure
+> 2. fix the date parser
+> 3. update the fixtures
+> 4. re-run the suite
 >
 > *…work…*
 >
@@ -68,21 +71,25 @@ echo ".eta/" >> .gitignore
 > the checkout tests are failing, fix them
 ```
 
-**4. It answers with a plan and a finish time**
+**4. It answers with a numbered plan and a finish time**
 
 ```
-Four steps: reproduce the failure, fix the date parser, update the fixtures,
-re-run the suite.
+1. reproduce the failure
+2. fix the date parser
+3. update the fixtures
+4. re-run the suite
 
 …
 
 ETA: 17:45
 ```
 
+The plan comes before the work, so you can cut step 3 before it happens.
+
 **5. It reports as each step lands**
 
 ```
-step 2/4 done in 4.1 min (3.8 min/step so far)
+step 2/4 done in 4.1 min — fix the date parser (3.8 min/step so far) (next: update the fixtures)
 ETA: 17:49
 ```
 
@@ -112,7 +119,7 @@ Three pieces:
 
 | | |
 |---|---|
-| **Commit** | Before touching anything, the agent counts the steps and prints a finish time as the last line of its reply. |
+| **Commit** | Before touching anything, the agent names the steps and prints a finish time as the last line of its reply. A bare step count is refused. |
 | **Measure** | Each finished step is timed and the remainder is re-forecast from the measured pace — not from the original guess. |
 | **Learn** | The estimate and the actual land in a log. The next estimate is the median of what really happened. |
 
@@ -129,11 +136,12 @@ Three pieces:
     └── gemini-3-pro/log.tsv
 ```
 
-One tab-separated row per turn — steps, estimate, actual, and how long each step ran:
+One tab-separated row per turn — the steps by name, the estimate, the actual, and how long each step
+ran:
 
 ```
-# id     start                 steps  est_min  end                   actual_min  state  size  step_mins
-48i35qek 2026-08-08T06:39:57Z  4      14       2026-08-08T06:56:44Z  17          done   M     4.1,3.2,5.0,4.7
+# id     start                 steps  est_min  end                   actual_min  state  size  step_mins        step_names
+48i35qek 2026-08-08T06:39:57Z  4      14       2026-08-08T06:56:44Z  17          done   M     4.1,3.2,5.0,4.7  reproduce|fix parser|fixtures|re-run
 ```
 
 It lives **inside the project**, split by **provider and model**, for two reasons:

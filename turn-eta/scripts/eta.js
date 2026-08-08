@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // show-me-your-eta — tell the user when this turn will be done, then learn from what it really took.
 //
-//   eta.js plan <steps> --provider <p> --model <m> [--size S|M|L]   open a turn, print the ETA
+//   eta.js plan "first step" "second step" … --provider <p> --model <m> [--size S|M|L]
 //   eta.js step [id]                                                one step finished, reprint the ETA
 //   eta.js done [id]                                                close the turn, record the miss
 //   eta.js stats [--provider <p> --model <m>]                       what the log says right now
@@ -23,7 +23,7 @@ const fs = require('fs')
 const path = require('path')
 const os = require('os')
 
-const HEADER = '# id\tstart\tsteps\test_min\tend\tactual_min\tstate\tsize\tstep_mins'
+const HEADER = '# id\tstart\tsteps\test_min\tend\tactual_min\tstate\tsize\tstep_mins\tstep_names'
 const DEFAULT_PACE_MIN = 4 // per step, until the log has something better to say
 const MIN_SAMPLES = 3 // a rung needs this many finished turns before we trust it
 const RECENT = 20
@@ -97,6 +97,7 @@ function load(file) {
       state: c[6],
       size: c[7] || 'M',
       stepMins: (c[8] || '').split(',').filter(Boolean).map(Number),
+      names: (c[9] || '').split('|').filter(Boolean),
     }))
 }
 
@@ -113,6 +114,7 @@ function save(file, rows) {
       r.state,
       r.size,
       r.stepMins.map(round1).join(','),
+      r.names.join('|'),
     ].join('\t')
   )
   fs.writeFileSync(file, [HEADER, ...body].join('\n') + '\n')
@@ -180,8 +182,9 @@ const etaLine = (ms) => `ETA: ${clock(ms)}`
 
 // ---------- commands ----------
 
-function openRow(file, opt, steps, now) {
+function openRow(file, opt, names, now) {
   const rows = load(file)
+  const steps = names.length
   const p = pace(opt.root, opt, opt.shared)
   const est = Math.max(1, Math.round(p.min * steps))
   const id = Math.random().toString(36).slice(2, 10)
@@ -195,16 +198,19 @@ function openRow(file, opt, steps, now) {
     state: 'open',
     size: opt.size,
     stepMins: [],
+    names,
   })
   save(file, rows)
-  return { id, est, p }
+  return { id, est, p, steps }
 }
 
-function plan(opt, steps, now = Date.now()) {
+function plan(opt, names, now = Date.now()) {
   const file = logPathFor(opt.root, opt.provider, opt.model)
-  const { id, est, p } = openRow(file, opt, steps, now)
+  const { id, est, p, steps } = openRow(file, opt, names, now)
   const b = bias(opt.root, opt)
   const out = [
+    ...names.map((n, i) => `${i + 1}. ${n}`),
+    '',
     `${steps} steps, ~${est} min (${round1(p.min)} min/step from ${p.from}, ${p.n} turns)`,
     etaLine(now + est * MS),
   ]
@@ -256,8 +262,11 @@ function step(opt, id, now = Date.now()) {
   const observed = spent / doneSteps
   const left = Math.max(0, row.steps - doneSteps)
   const eta = now + Math.round(observed * left) * MS
+  const label = row.names[doneSteps - 1] ? ` — ${row.names[doneSteps - 1]}` : ''
+  const next = left && row.names[doneSteps] ? ` (next: ${row.names[doneSteps]})` : ''
   const text = [
-    `step ${doneSteps}/${row.steps} done in ${round1(row.stepMins[doneSteps - 1])} min (${round1(observed)} min/step so far)`,
+    `step ${doneSteps}/${row.steps} done in ${round1(row.stepMins[doneSteps - 1])} min${label}` +
+      ` (${round1(observed)} min/step so far)${next}`,
     left ? etaLine(eta) : 'last step — wrap up and run done',
   ].join('\n')
   return { id: row.id, text, remaining: left }
@@ -331,9 +340,11 @@ function main(argv) {
 
   try {
     if (cmd === 'plan') {
-      const steps = Number(arg)
-      if (!Number.isFinite(steps) || steps < 1) throw new Error('plan needs a step count, e.g. plan 4')
-      console.log(plan(opt, Math.round(steps)).text)
+      const names = rest.slice(1).filter((n) => n.trim())
+      if (!names.length || names.every((n) => /^\d+$/.test(n))) {
+        throw new Error('plan needs the steps by name, e.g. plan "reproduce the failure" "fix the parser"')
+      }
+      console.log(plan(opt, names).text)
       return 0
     }
     if (cmd === 'step') return console.log(step(opt, arg).text), 0
@@ -345,7 +356,7 @@ function main(argv) {
   }
 
   console.error(
-    'usage: eta.js plan <steps> | step [id] | done [id] | stats  [--provider p --model m --size S|M|L] [--dir .eta]'
+    'usage: eta.js plan "step one" "step two" … | step [id] | done [id] | stats  [--provider p --model m --size S|M|L] [--dir .eta]'
   )
   return 2
 }
@@ -373,15 +384,19 @@ function selftest() {
   assert.ok(etaRoot(deep).endsWith('.eta'))
 
   // a fresh log falls back to the default pace
-  const first = plan(o(), 3, t0)
+  const names3 = ['read the test', 'fix the parser', 're-run']
+  const first = plan(o(), names3, t0)
   assert.ok(first.text.includes('from default'), first.text)
   assert.strictEqual(first.est, 12)
   assert.ok(/ETA: \d\d:\d\d/.test(first.text), first.text)
+  assert.ok(first.text.startsWith('1. read the test\n2. fix the parser\n3. re-run\n'), first.text)
 
   // steps are measured one by one and the forecast follows the measured pace
   const s1 = step(o(), first.id, t0 + 2 * MS)
   assert.ok(s1.text.includes('step 1/3'), s1.text)
   assert.ok(s1.text.includes('2 min'), s1.text)
+  assert.ok(s1.text.includes('— read the test'), s1.text)
+  assert.ok(s1.text.includes('next: fix the parser'), s1.text)
   const s2 = step(o(), first.id, t0 + 4 * MS)
   assert.ok(s2.text.includes('step 2/3'), s2.text)
   const closed = done(o(), first.id, t0 + 6 * MS)
@@ -389,52 +404,53 @@ function selftest() {
   assert.ok(closed.text.includes('6 min long'), closed.text) // 12 estimated, 6 actual
   const row = load(logPathFor(root, 'anthropic', 'claude-opus-5')).pop()
   assert.deepStrictEqual(row.stepMins, [2, 2, 2], JSON.stringify(row.stepMins))
+  assert.deepStrictEqual(row.names, names3, JSON.stringify(row.names))
 
   // once MIN_SAMPLES turns exist, the measured median replaces the default
   const put = (opt, steps, spent, at = t0) => {
-    const p = plan(opt, steps, at)
+    const p = plan(opt, Array.from({ length: steps }, (_, i) => `step ${i + 1}`), at)
     done(opt, p.id, at + spent * MS)
   }
   put(o(), 3, 6)
   put(o(), 3, 6)
-  const fourth = plan(o(), 3, t0)
+  const fourth = plan(o(), names3, t0)
   assert.ok(fourth.text.includes('anthropic/claude-opus-5 M'), fourth.text)
   assert.ok(fourth.text.includes('2 min/step'), fourth.text)
   done(o(), fourth.id, t0 + MS)
 
   // a size with no history of its own drops one rung, to the same model
-  const large = plan(o({ size: 'L' }), 2, t0)
+  const large = plan(o({ size: 'L' }), ['a', 'b'], t0)
   assert.ok(large.text.includes('from anthropic/claude-opus-5,'), large.text)
   done(o({ size: 'L' }), large.id, t0 + MS)
 
   // an unseen model drops to the provider, and an unseen provider to everything here
-  const otherModel = plan(o({ model: 'claude-haiku-4-5' }), 2, t0)
+  const otherModel = plan(o({ model: 'claude-haiku-4-5' }), ['a', 'b'], t0)
   assert.ok(otherModel.text.includes('from anthropic,'), otherModel.text)
   done(o({ model: 'claude-haiku-4-5' }), otherModel.id, t0 + MS)
 
-  const otherProvider = plan(o({ provider: 'openai', model: 'gpt-5' }), 2, t0)
+  const otherProvider = plan(o({ provider: 'openai', model: 'gpt-5' }), ['a', 'b'], t0)
   assert.ok(otherProvider.text.includes('from all,'), otherProvider.text)
   done(o({ provider: 'openai', model: 'gpt-5' }), otherProvider.id, t0 + MS)
 
   // a second project borrows only through the shared log
   const other = path.join(tmp, 'other', '.eta')
-  const alone = plan({ ...o(), root: other }, 3, t0)
+  const alone = plan({ ...o(), root: other }, names3, t0)
   assert.ok(alone.text.includes('from default'), alone.text)
   done({ ...o(), root: other }, alone.id, t0 + MS)
-  const borrowed = plan({ ...o(), root: other, shared: root }, 3, t0)
+  const borrowed = plan({ ...o(), root: other, shared: root }, names3, t0)
   assert.ok(borrowed.text.includes('shared anthropic/claude-opus-5'), borrowed.text)
   done({ ...o(), root: other, shared: root }, borrowed.id, t0 + MS)
 
   // step and done without --provider/--model follow the most recent open turn
   const bare = { provider: 'unknown', model: 'unknown', size: 'M', root, shared: null, explicit: false }
-  const opened = plan(o(), 2, t0)
+  const opened = plan(o(), ['a', 'b'], t0)
   const followed = step(bare, undefined, t0 + MS)
   assert.strictEqual(followed.id, opened.id, 'step without flags must follow the open turn')
   assert.strictEqual(done(bare, undefined, t0 + 2 * MS).id, opened.id)
 
   // an abandoned turn must not hijack the next step
-  const stale = plan(o(), 9, t0 - 5 * 60 * MS)
-  const fresh = plan(o(), 2, t0)
+  const stale = plan(o(), Array.from({ length: 9 }, (_, i) => `s${i}`), t0 - 5 * 60 * MS)
+  const fresh = plan(o(), ['a', 'b'], t0)
   assert.strictEqual(step(o(), undefined, t0 + MS).id, fresh.id, 'step must follow the fresh turn')
   assert.strictEqual(done(o(), stale.id, t0 + MS).id, stale.id, 'a named id still works')
   done(o(), fresh.id, t0 + MS)

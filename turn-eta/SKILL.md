@@ -5,15 +5,17 @@ description: When a turn contains real work (editing files, running commands, di
 
 # turn-eta — say when this turn will be done, then learn from what it took
 
-Before the work starts, say how many steps it is and when it will be finished. Time each step as it
-lands. When the turn ends, write down what it really took. The next estimate reads that log.
+Before the work starts, write out the steps as a numbered list and say when it will be finished. Time
+each step as it lands. When the turn ends, write down what it really took, and the next estimate reads
+that log.
 
 ## When this runs
 
 **Every turn that contains real work** — editing a file, running a command, searching the codebase.
 
-- Work in the turn → call `plan` **before** starting, put `ETA: 17:45` as its own final paragraph in
-  your reply, call `step` as each step lands, call `done` when the turn's work is finished.
+- Work in the turn → call `plan` **before** starting, open your reply with the numbered plan it prints,
+  put `ETA: 17:45` as its own final paragraph, call `step` as each step lands, and call `done` when the
+  turn's work is finished.
 - Conversation-only turn (answering a question, deciding what to build) → do nothing. It is noise.
 - A one-line fix is not worth the ceremony either. Use it when there is more than one step.
 
@@ -22,9 +24,16 @@ lands. When the turn ends, write down what it really took. The next estimate rea
 Pure Node, no install. Call it from wherever the skill is installed.
 
 ```bash
-# before the work — count the steps and get an ETA
-node <skill>/scripts/eta.js plan 4 --provider anthropic --model claude-opus-5 --size M
+# before the work — name the steps and get an ETA
+node <skill>/scripts/eta.js plan \
+  "reproduce the failure" "fix the date parser" "update the fixtures" "re-run the suite" \
+  --provider anthropic --model claude-opus-5 --size M
 
+# 1. reproduce the failure
+# 2. fix the date parser
+# 3. update the fixtures
+# 4. re-run the suite
+#
 # 4 steps, ~14 min (3.5 min/step from anthropic/claude-opus-5 M, 6 turns)
 # ETA: 17:45
 # (last 6 estimates ran 3 min long)
@@ -32,7 +41,7 @@ node <skill>/scripts/eta.js plan 4 --provider anthropic --model claude-opus-5 --
 
 # each time a step lands — measured, and the rest is re-forecast from the measured pace
 node <skill>/scripts/eta.js step
-# step 2/4 done in 4.1 min (3.8 min/step so far)
+# step 2/4 done in 4.1 min — fix the date parser (3.8 min/step so far) (next: update the fixtures)
 # ETA: 17:49
 
 # when the turn's work is done
@@ -42,6 +51,10 @@ node <skill>/scripts/eta.js done
 # what the log says right now
 node <skill>/scripts/eta.js stats
 ```
+
+**Name the steps, don't just count them.** `plan` refuses a bare number. A count nobody can check is
+not a plan — named steps let the person reading say "skip 3" before you start. Put that numbered list at
+the top of your reply, then do the work.
 
 **You must pass your own `--provider` and `--model`.** A shell cannot see which model is driving it.
 Use the identifiers you know yourself by — `--provider anthropic --model claude-opus-5`,
