@@ -71,7 +71,7 @@ echo ".eta/" >> .gitignore
 > the checkout tests are failing, fix them
 ```
 
-**4. It answers with a numbered plan and a finish time**
+**4. It opens with a numbered plan and a finish time**
 
 ```
 1. reproduce the failure
@@ -79,12 +79,10 @@ echo ".eta/" >> .gitignore
 3. update the fixtures
 4. re-run the suite
 
-…
-
 ETA: 17:45
 ```
 
-The plan comes before the work, so you can cut step 3 before it happens.
+Both land before the work starts, so you can cut step 3 while cutting it is still free.
 
 **5. It reports as each step lands**
 
@@ -96,7 +94,7 @@ ETA: 17:49
 **6. When it finishes, you get the real time and the miss**
 
 ```
-finished: 17:48 (estimated 14 min / actual 17 min, 3 min short)
+finished: 17:48 (estimated 14 min / actual 17 min)
 ```
 
 An estimate is only worth printing while the work is still running. Once it is done, the honest closing

@@ -290,15 +290,10 @@ function done(opt, id, now = Date.now()) {
   if (counted < actual) row.stepMins.push(round1(actual - counted)) // the tail after the last step
   save(file, rows)
 
-  const off = row.est - actual
-  const verdict = off === 0 ? 'spot on' : `${Math.abs(off)} min ${off > 0 ? 'long' : 'short'}`
   // The reply is written after the work is finished, so the closing line is a finish time,
   // not a forecast. Printing the old ETA there would date-stamp a guess that already expired.
-  return {
-    id: row.id,
-    actual,
-    text: `finished: ${clock(now)} (estimated ${row.est} min / actual ${actual} min, ${verdict})`,
-  }
+  // The two numbers say how far off it was; naming the gap on top of them is padding.
+  return { id: row.id, actual, text: `finished: ${clock(now)} (estimated ${row.est} min / actual ${actual} min)` }
 }
 
 function stats(opt) {
@@ -415,7 +410,8 @@ function selftest() {
   assert.ok(s2.text.includes('step 2/3'), s2.text)
   const closed = done(o(), first.id, t0 + 6 * MS)
   assert.strictEqual(closed.actual, 6)
-  assert.ok(closed.text.includes('6 min long'), closed.text) // 12 estimated, 6 actual
+  assert.ok(closed.text.includes('estimated 12 min / actual 6 min'), closed.text)
+  assert.ok(!/spot on|long|short/.test(closed.text), closed.text) // the numbers say it; no verdict
   assert.ok(/^finished: \d\d:\d\d /.test(closed.text), closed.text) // a clock time, not a forecast
   const row = load(logPathFor(root, 'anthropic', 'claude-opus-5')).pop()
   assert.deepStrictEqual(row.stepMins, [2, 2, 2], JSON.stringify(row.stepMins))

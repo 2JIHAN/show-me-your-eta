@@ -14,10 +14,12 @@ estimate reads that log.
 **Every turn that contains real work** — editing a file, running a command, searching the codebase.
 
 - Work in the turn → call `plan` **before** starting and open your reply with the numbered plan it
-  prints. Call `step <id>` as each step lands, and `done <id>` when the turn's work is finished.
-- **The last paragraph is a time, and which time depends on whether anything is still running.**
+  prints, **including its `ETA:` line**. The plan is what the reader checks before the work happens, and
+  a plan without a finish time is half a plan. Call `step <id>` as each step lands, and `done <id>` when
+  the turn's work is finished.
+- **The last paragraph is a time too, and which time depends on whether anything is still running.**
   - Everything finished before you write the reply → the finish line from `done`:
-    `finished: 16:21 (estimated 1 min / actual 3 min, 2 min short)`. By then the ETA has expired;
+    `finished: 16:21 (estimated 1 min / actual 3 min)`. By then the ETA has expired;
     reprinting it hands the reader a guess that the clock already disproved.
   - Something is still running (a background job, a delegated task) → the forecast: `ETA: 17:45`.
     Recompute it as you write, never paste the number `plan` printed earlier.
@@ -51,7 +53,7 @@ node <skill>/scripts/eta.js step 48i35qek
 
 # when the turn's work is done
 node <skill>/scripts/eta.js done 48i35qek
-# finished: 17:48 (estimated 14 min / actual 17 min, 3 min short)
+# finished: 17:48 (estimated 14 min / actual 17 min)
 
 # what the log says right now
 node <skill>/scripts/eta.js stats

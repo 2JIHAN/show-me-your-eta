@@ -1,3 +1,6 @@
 .eta/
 node_modules/
 .DS_Store
+.agents/
+.claude/
+skills-lock.json
