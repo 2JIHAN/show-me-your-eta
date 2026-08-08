@@ -14,14 +14,14 @@ estimate reads that log.
 **Every turn that contains real work** — editing a file, running a command, searching the codebase.
 
 - Work in the turn → call `plan` **before** starting and open your reply with the numbered plan it
-  prints, **including its `ETA:` line, kept as its own paragraph**. The plan is what the reader checks before the work happens, and
+  prints, **including its `**ETA …**` line, kept as its own paragraph**. The plan is what the reader checks before the work happens, and
   a plan without a finish time is half a plan. Call `step <id>` as each step lands, and `done <id>` when
   the turn's work is finished.
 - **The last paragraph is a time too, and which time depends on whether anything is still running.**
   - Everything finished before you write the reply → the whole block `done` prints: the finish line
     the finish line from `done`. By then the ETA has expired; reprinting it hands the reader a
     guess the clock already disproved, while the per-step times show where it went wrong.
-  - Something is still running (a background job, a delegated task) → the forecast: `ETA: 17:45`.
+  - Something is still running (a background job, a delegated task) → the forecast: `**ETA 17:45**`.
     Recompute it as you write, never paste the number `plan` printed earlier.
 - Conversation-only turn (answering a question, deciding what to build) → do nothing. It is noise.
 - A one-line fix is not worth the ceremony either. Use it when there is more than one step.
@@ -43,7 +43,7 @@ node <skill>/scripts/eta.js plan \
 #
 # 4 steps, ~14 min (3.5 min/step from anthropic/claude-opus-5 M, 6 turns)
 #
-# ETA: 17:45 (14 min)
+# **ETA 17:45** (14 min)
 #
 # (last 6 estimates ran 3 min long)
 # turn id: 48i35qek

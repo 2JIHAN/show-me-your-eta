@@ -48,7 +48,7 @@ makes them lay out the steps and a finish time first, then checks that time agai
 >
 > *…work…*
 >
-> **ETA: 17:45**
+> **ETA 17:45** (14 min)
 
 </td></tr>
 </table>
@@ -89,7 +89,7 @@ echo ".eta/" >> .gitignore
 3. update the fixtures
 4. re-run the suite
 
-ETA: 17:45 (14 min)
+**ETA 17:45** (14 min)
 ```
 
 Both land before the work starts, so you can cut step 3 while cutting it is still free.
@@ -118,7 +118,8 @@ line is the clock. Every step's time stays in the log.
 
 ```
 4 steps, ~15 min (3.8 min/step from anthropic/claude-opus-5 M, 9 turns)
-ETA: 18:22
+
+**ETA 18:22** (15 min)
 ```
 
 The first estimate is a stock guess. The tenth is measured on your machine, in your codebase, with the

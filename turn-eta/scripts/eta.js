@@ -196,7 +196,7 @@ const iso = (ms) => {
   const time = `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`
   return `${date}T${time}${off < 0 ? '-' : '+'}${p2(off / 60)}:${p2(off % 60)}`
 }
-const etaLine = (ms) => `ETA: ${clock(ms)}`
+const etaLine = (ms) => `**ETA ${clock(ms)}**`
 // Minutes are too coarse for a single step — a 40-second step should not read as "0 min".
 const hms = (min) => {
   const total = Math.max(0, Math.round(min * 60))
@@ -448,12 +448,12 @@ function selftest() {
   const first = plan(o(), names3, t0)
   assert.ok(first.text.includes('from default'), first.text)
   assert.strictEqual(first.est, 12)
-  assert.ok(/ETA: \d\d:\d\d/.test(first.text), first.text)
+  assert.ok(/\*\*ETA \d\d:\d\d\*\*/.test(first.text), first.text)
   assert.ok(first.text.startsWith('1. read the test\n2. fix the parser\n3. re-run\n'), first.text)
   const planLines = first.text.split('\n')
-  const etaAt = planLines.findIndex((l) => l.startsWith('ETA:'))
+  const etaAt = planLines.findIndex((l) => l.startsWith('**ETA '))
   assert.ok(etaAt > 0 && planLines[etaAt - 1] === '' && planLines[etaAt + 1] === '', first.text)
-  assert.ok(/^ETA: \d\d:\d\d \(12 min\)$/.test(planLines[etaAt]), planLines[etaAt]) // how long, not just when
+  assert.ok(/^\*\*ETA \d\d:\d\d\*\* \(12 min\)$/.test(planLines[etaAt]), planLines[etaAt]) // how long, not just when
 
   // steps are measured one by one and the forecast follows the measured pace
   const s1 = step(o(), first.id, t0 + 2 * MS)
