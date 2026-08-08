@@ -93,11 +93,14 @@ step 2/4 done in 4.1 min — fix the date parser (3.8 min/step so far) (next: up
 ETA: 17:49
 ```
 
-**6. When it finishes, the miss is written down**
+**6. When it finishes, you get the real time and the miss**
 
 ```
-estimated 14 min / actual 17 min (3 min short)
+finished: 17:48 (estimated 14 min / actual 17 min, 3 min short)
 ```
+
+An estimate is only worth printing while the work is still running. Once it is done, the honest closing
+line is the clock.
 
 **7. A few turns later, the estimate is yours, not a guess**
 
@@ -122,6 +125,7 @@ Three pieces:
 | **Commit** | Before touching anything, the agent names the steps and prints a finish time as the last line of its reply. A bare step count is refused. |
 | **Measure** | Each finished step is timed and the remainder is re-forecast from the measured pace — not from the original guess. |
 | **Learn** | The estimate and the actual land in a log. The next estimate is the median of what really happened. |
+| **Close honestly** | When the work is finished the reply ends with the finish time, not with an ETA the clock already disproved. |
 
 ### What it writes down
 
@@ -223,9 +227,8 @@ Without it the skill still triggers on its own description; it just fires less o
 **What if the agent forgets to call `done`?** The turn stays open and is ignored by every estimate.
 After four hours it is treated as abandoned.
 
-**Two agents in one project?** `plan` prints a turn id and the skill tells the agent to carry it through
-every call. If two turns are open and a call arrives without an id, the script refuses instead of closing
-the wrong one.
+**Two agents in one project?** `plan` prints a turn id and `step` and `done` require it. Neither can
+close a turn it did not open.
 
 **Do I have to run anything myself?** No. The agent reads the skill and calls the script. The only
 commands you type are the install and, if you contribute, the self-test.

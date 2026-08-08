@@ -69,10 +69,10 @@ lands under `unknown/unknown`, which still works but pools every model together.
 `--size` is `S` (small fix), `M` (normal, the default), or `L` (large chunk). Rough is fine; it only
 keeps small turns from dragging the average of large ones.
 
-**The turn id is required.** `plan` prints one; carry it through every `step` and the final `done` —
-`step 48i35qek`, `done 48i35qek`. Another agent working in the same project writes to the same log, so a
-call without an id used to close whichever turn happened to be open — someone else's. `step` and `done`
-now refuse without it. A turn nobody has touched for four hours counts as abandoned.
+**Always pass the turn id.** `plan` prints one; carry it through every `step` and the final `done` —
+`step 48i35qek`, `done 48i35qek`. Another agent working in the same project writes to the same log, and
+an id-less call can close its turn instead of yours. If two turns are open and no id is given, the
+script refuses rather than guess. A turn nobody has touched for four hours counts as abandoned.
 
 ## Where the log lives
 
