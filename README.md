@@ -97,28 +97,23 @@ Both land before the work starts, so you can cut step 3 while cutting it is stil
 **5. Each step is timed as it lands, and the rest is re-forecast**
 
 ```
-step 2/4 done in 4.1 min — fix the date parser (3.8 min/step so far) (next: update the fixtures)
-ETA: 17:49
+|#|step|worktime|eta|change|
+|-|-|-|-|-|
+|2/4|fix the date parser|8m 06s|17:49|+4|
 ```
 
-Step 1 ran long, so the finish time moved. Whether you watch this happen or only see it at the end
-depends on your agent — most send one message per turn.
+`change` is how many minutes the finish time moved since the last row — that step ran long, so
+everything after it shifted. Whether you watch this happen or only see it at the end depends on your
+agent; most send one message per turn.
 
-**6. When it finishes, you get the real time and where it went**
+**6. When it finishes, you get the real time**
 
 ```
-| # | step | min |
-|---|------|-----|
-| 1 | reproduce the failure | 3.2 |
-| 2 | fix the date parser | 8.1 |
-| 3 | update the fixtures | 1.9 |
-| 4 | re-run the suite | 3.8 |
-
 finished: 17:48 (estimated 14 min / actual 17 min)
 ```
 
 An estimate is only worth printing while the work is still running. Once it is done, the honest closing
-line is the clock — and the per-step times say which step ate the estimate.
+line is the clock. Every step's time stays in the log.
 
 **7. A few turns later, the estimate is yours, not a guess**
 
@@ -143,7 +138,7 @@ Four pieces:
 | **Commit** | Before touching anything, the agent names the steps and opens its reply with the numbered plan and a finish time. A bare step count is refused. |
 | **Measure** | Each finished step is timed and the remainder is re-forecast from the measured pace — not from the original guess. |
 | **Learn** | The estimate and the actual land in a log. The next estimate is the median of what really happened. |
-| **Close honestly** | The reply ends with the finish time and the per-step table, not with an ETA the clock already disproved. |
+| **Close honestly** | The reply ends with the finish time, not with an ETA the clock already disproved. |
 
 ### What it writes down
 
@@ -211,7 +206,7 @@ If this turn contains real work, follow $S/SKILL.md.
 - Before starting: \`$E plan "first step" "second step" … --provider <p> --model <m> --size S|M|L\`
 - Open the reply with the numbered list and the \`ETA:\` line it prints
 - \`$E step <turn id>\` as each step lands, \`$E done <turn id>\` at the end — the id is required
-- Close the reply with what \`done\` prints: the finish line and the per-step table
+- Close the reply with what \`done\` prints: the finish line
 TXT
 exit 0
 ```

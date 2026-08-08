@@ -23,7 +23,7 @@ const fs = require('fs')
 const path = require('path')
 const os = require('os')
 
-const HEADER = '# id\tstart\tsteps\test_min\tend\tactual_min\tstate\tsize\tstep_mins\tstep_names'
+const HEADER = '# id\tstart\tsteps\test_min\tend\tactual_min\tstate\tsize\tstep_mins\tstep_names\teta'
 const DEFAULT_PACE_MIN = 4 // per step, until the log has something better to say
 const MIN_SAMPLES = 3 // a rung needs this many finished turns before we trust it
 const RECENT = 20
@@ -98,6 +98,7 @@ function load(file) {
       size: c[7] || 'M',
       stepMins: (c[8] || '').split(',').filter(Boolean).map(Number),
       names: (c[9] || '').split('|').filter(Boolean),
+      eta: c[10] || '',
     }))
 }
 
@@ -115,6 +116,7 @@ function save(file, rows) {
       r.size,
       r.stepMins.map(round1).join(','),
       r.names.join('|'),
+      r.eta || '',
     ].join('\t')
   )
   fs.writeFileSync(file, [HEADER, ...body].join('\n') + '\n')
@@ -195,6 +197,11 @@ const iso = (ms) => {
   return `${date}T${time}${off < 0 ? '-' : '+'}${p2(off / 60)}:${p2(off % 60)}`
 }
 const etaLine = (ms) => `ETA: ${clock(ms)}`
+// Minutes are too coarse for a single step — a 40-second step should not read as "0 min".
+const hms = (min) => {
+  const total = Math.max(0, Math.round(min * 60))
+  return `${Math.floor(total / 60)}m ${String(total % 60).padStart(2, '0')}s`
+}
 
 // ---------- commands ----------
 
@@ -215,6 +222,7 @@ function openRow(file, opt, names, now) {
     size: opt.size,
     stepMins: [],
     names,
+    eta: iso(now + est * MS),
   })
   save(file, rows)
   return { id, est, p, steps }
@@ -277,18 +285,24 @@ function step(opt, id, now = Date.now()) {
   const before = row.stepMins.reduce((a, b) => a + b, 0)
   row.stepMins.push(Math.max(0, round1(spent - before)))
   const doneSteps = row.stepMins.length
-  save(file, rows)
 
   const observed = spent / doneSteps
   const left = Math.max(0, row.steps - doneSteps)
   const eta = now + Math.round(observed * left) * MS
-  const label = row.names[doneSteps - 1] ? ` — ${row.names[doneSteps - 1]}` : ''
-  const next = left && row.names[doneSteps] ? ` (next: ${row.names[doneSteps]})` : ''
+  // How far the finish time moved since the last forecast. Without it the reader has to remember
+  // the old number to notice the slip.
+  const prev = Date.parse(row.eta)
+  const change = Number.isFinite(prev) ? Math.round((eta - prev) / MS) : 0
+  row.eta = iso(eta)
+  save(file, rows)
+
   const text = [
-    `step ${doneSteps}/${row.steps} done in ${round1(row.stepMins[doneSteps - 1])} min${label}` +
-      ` (${round1(observed)} min/step so far)${next}`,
-    left ? etaLine(eta) : 'last step — wrap up and run done',
+    '|#|step|worktime|eta|change|',
+    '|-|-|-|-|-|',
+    `|${doneSteps}/${row.steps}|${row.names[doneSteps - 1] ?? ''}|${hms(row.stepMins[doneSteps - 1])}|` +
+      `${clock(eta)}|${change >= 0 ? '+' : ''}${change}|`,
   ].join('\n')
+
   return { id: row.id, text, remaining: left }
 }
 
@@ -314,16 +328,8 @@ function done(opt, id, now = Date.now()) {
   // the estimate went wrong, and leaving them in the log means nobody ever reads them.
   // A markdown table, because this text gets pasted into a reply. Lining columns up by hand
   // means counting terminal cells, and a Korean step name is two cells wide per character.
-  const lines = [
-    '| # | step | min |',
-    '|---|------|-----|',
-    ...row.names.map((name, i) => `| ${i + 1} | ${name} | ${round1(row.stepMins[i] ?? 0)} |`),
-  ]
-  const tail = row.stepMins[row.names.length]
-  if (tail) lines.push(`| – | wrap-up | ${round1(tail)} |`)
-  // The finish line goes last: it is the sentence the reply ends on, and a table above it reads
-  // as the evidence. Put it first and the closing line is a table row nobody stops at.
-  lines.push('', `finished: ${clock(now)} (estimated ${row.est} min / actual ${actual} min)`)
+  // The per-step table lives in the log; the closing line is what the reply ends on.
+  const lines = [`finished: ${clock(now)} (estimated ${row.est} min / actual ${actual} min)`]
   return { id: row.id, actual, text: lines.join('\n') }
 }
 
@@ -438,21 +444,18 @@ function selftest() {
 
   // steps are measured one by one and the forecast follows the measured pace
   const s1 = step(o(), first.id, t0 + 2 * MS)
-  assert.ok(s1.text.includes('step 1/3'), s1.text)
-  assert.ok(s1.text.includes('2 min'), s1.text)
-  assert.ok(s1.text.includes('— read the test'), s1.text)
-  assert.ok(s1.text.includes('next: fix the parser'), s1.text)
+  assert.ok(s1.text.startsWith('|#|step|worktime|eta|change|'), s1.text) // header + one row
+  assert.strictEqual(s1.text.split('\n').length, 3, s1.text)
+  assert.ok(s1.text.includes('|1/3|read the test|2m 00s|'), s1.text)
+  assert.ok(/\|[+-]\d+\|$/.test(s1.text.split('\n')[2]), s1.text) // the change column is signed
   const s2 = step(o(), first.id, t0 + 4 * MS)
-  assert.ok(s2.text.includes('step 2/3'), s2.text)
+  assert.ok(s2.text.includes('|2/3|fix the parser|'), s2.text)
   const closed = done(o(), first.id, t0 + 6 * MS)
   assert.strictEqual(closed.actual, 6)
   assert.ok(closed.text.includes('estimated 12 min / actual 6 min'), closed.text)
   assert.ok(!/spot on|long|short/.test(closed.text), closed.text) // the numbers say it; no verdict
-  const last = closed.text.split('\n').pop()
-  assert.ok(/^finished: \d\d:\d\d /.test(last), closed.text) // the closing line, after the table
-  assert.ok(closed.text.includes('| 1 | read the test | 2 |'), closed.text) // per-step, as a table
-  assert.ok(closed.text.includes('| 3 | re-run | 2 |'), closed.text)
-  assert.strictEqual(closed.text.split('\n').length, 7, closed.text)
+  assert.ok(/^finished: \d\d:\d\d /.test(closed.text), closed.text)
+  assert.strictEqual(closed.text.split('\n').length, 1, closed.text) // one closing line, no table
   const row = load(logPathFor(root, 'anthropic', 'claude-opus-5')).pop()
   assert.deepStrictEqual(row.stepMins, [2, 2, 2], JSON.stringify(row.stepMins))
   assert.deepStrictEqual(row.names, names3, JSON.stringify(row.names))
@@ -497,6 +500,7 @@ function selftest() {
   const opened = plan(o(), ['a', 'b'], t0)
   const followed = step(bare, undefined, t0 + MS)
   assert.strictEqual(followed.id, opened.id, 'step without flags must follow the open turn')
+  assert.ok(hms(0.5) === '0m 30s' && hms(4.1) === '4m 06s', hms(4.1))
   assert.strictEqual(done(bare, undefined, t0 + 2 * MS).id, opened.id)
 
   // two open turns at once: guessing is worse than stopping
