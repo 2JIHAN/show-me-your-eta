@@ -27,6 +27,10 @@
 Agents are happy to work for twenty minutes without telling you it will be twenty minutes. This skill
 makes them lay out the steps and a finish time first, then checks that time against the clock.
 
+<p align="center">
+  <img src="assets/demo.gif" alt="A turn opening with a numbered plan and a finish time, the ETA moving as each step lands" width="760">
+</p>
+
 <table>
 <tr><th>Without it</th><th>With it</th></tr>
 <tr valign="top"><td>

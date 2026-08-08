@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 530" width="760" height="530" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14">
+<rect width="760" height="530" rx="10" fill="#0d1117"/>
+<circle cx="24" cy="24" r="6" fill="#ff5f57"/>
+<circle cx="44" cy="24" r="6" fill="#febc2e"/>
+<circle cx="64" cy="24" r="6" fill="#28c840"/>
+<text x="380.0" y="29" fill="#6e7681" text-anchor="middle" font-size="12">show-me-your-eta</text>
+<g opacity="0"><text x="26" y="62" fill="#3fb950">$</text><text x="44" y="62" fill="#c9d1d9">the checkout tests are failing, fix them</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.0187;0.0387;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="88" fill="#c9d1d9">1. reproduce the failure</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.0875;0.1075;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="114" fill="#c9d1d9">2. fix the date parser</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.1062;0.1263;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="140" fill="#c9d1d9">3. update the fixtures</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.1250;0.1450;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="166" fill="#c9d1d9">4. re-run the suite</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.1437;0.1637;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="192" fill="#6e7681">4 steps, ~14 min (3.5 min/step from anthropic/claude-opus-5 M, 6 turns)</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.1750;0.1950;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="224" fill="#58a6ff" font-weight="700">ETA 17:45  (14 min)</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.2000;0.2200;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="256" fill="#c9d1d9">1/4 reproduce the failure — 3m 12s</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.3125;0.3325;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="288" fill="#58a6ff" font-weight="700">ETA 17:47  (2 min later)</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.3312;0.3513;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="320" fill="#c9d1d9">2/4 fix the date parser — 8m 06s</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.4375;0.4575;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="352" fill="#58a6ff" font-weight="700">ETA 17:52  (5 min later)</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.4562;0.4763;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="384" fill="#c9d1d9">3/4 update the fixtures — 1m 54s</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.5625;0.5825;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="416" fill="#58a6ff" font-weight="700">ETA 17:49  (3 min earlier)</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.5813;0.6013;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="448" fill="#c9d1d9">4/4 re-run the suite — 3m 48s</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.6875;0.7075;1" dur="16.0s" repeatCount="indefinite"/></g>
+<g opacity="0"><text x="26" y="480" fill="#3fb950" font-weight="700">FINISHED 17:48  (estimated 14 min / actual 17 min)</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.7250;0.7450;1" dur="16.0s" repeatCount="indefinite"/></g>
+</svg>

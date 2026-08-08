@@ -28,6 +28,10 @@
 건지와 끝날 시각을 먼저 적게 합니다. 그러고는 그 시각을 시계와 맞춰 보고, 어긋난 만큼을 기록해서 다음에
 더 맞게 만듭니다.
 
+<p align="center">
+  <img src="assets/demo.gif" alt="A turn opening with a numbered plan and a finish time, the ETA moving as each step lands" width="760">
+</p>
+
 <table>
 <tr><th>없을 때</th><th>있을 때</th></tr>
 <tr valign="top"><td>
