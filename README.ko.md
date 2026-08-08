@@ -110,7 +110,7 @@ echo ".eta/" >> .gitignore
 **6. 끝나면 실제 시각이 나옵니다**
 
 ```
-finished: 17:48 (estimated 14 min / actual 17 min)
+**finished 17:48** (estimated 14 min / actual 17 min)
 ```
 
 예상은 일이 도는 동안에만 값어치가 있습니다. 끝난 뒤에 정직한 마지막 줄은 시계입니다. 스텝별 시간은
