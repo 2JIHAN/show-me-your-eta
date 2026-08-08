@@ -14,8 +14,8 @@ English · [한국어](README.ko.md)
 
 ---
 
-Agents are happy to work for twenty minutes without telling you it will be twenty minutes. This skill
-makes them commit to a number, hold themselves to it, and learn from every miss.
+Agents are happy to work for twenty minutes without telling you it will be twenty minutes. This skill makes them
+name a number before they start, then checks that number against the clock.
 
 <table>
 <tr><th>Without it</th><th>With it</th></tr>
@@ -43,7 +43,7 @@ makes them commit to a number, hold themselves to it, and learn from every miss.
 Every step is timed as it lands, so a turn that starts slow says so at step 2 instead of at the end.
 When the turn closes, the estimate and the truth go into a log — and the next estimate reads that log.
 
-Any agent. Any provider. Any model.
+It works with any agent, any provider, and any model.
 
 ## Quickstart
 
@@ -99,8 +99,8 @@ estimated 14 min / actual 17 min (3 min short)
 ETA: 18:22
 ```
 
-That last line is the whole point. The first estimate is a stock guess. The tenth is measured from your
-machine, your codebase, and the model you actually use.
+The first estimate is a stock guess. The tenth is measured on your machine, in your codebase, with the
+model you actually run.
 
 > [!TIP]
 > Installing puts the instructions where the agent can find them, but whether it reaches for them every
@@ -108,7 +108,7 @@ machine, your codebase, and the model you actually use.
 
 ## How it works
 
-Three pieces, no magic:
+Three pieces:
 
 | | |
 |---|---|
@@ -157,7 +157,7 @@ turns:
 | 6 | 4 minutes per step | nothing to go on yet |
 
 Median rather than mean, so one turn that ran long does not drag every future estimate with it. Last 20
-turns per rung. The rung it used is printed every time, so the number is never a mystery.
+turns per rung. The rung it used is printed every time, so you can see where the number came from.
 
 Point `TURN_ETA_DIR` at another `.eta` directory to let a fresh project borrow from an old one. It is
 only consulted when the local log has nothing to say.
