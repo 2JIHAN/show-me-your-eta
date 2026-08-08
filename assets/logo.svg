@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="show-me-your-eta">
+  <g fill="none" stroke="#111111" stroke-linecap="round">
+    <circle cx="100" cy="100" r="86" stroke-width="5"/>
+    <!-- 지난 만큼이 테를 채운다: 12시에서 2시까지 -->
+    <path d="M100 14 A86 86 0 0 1 174.5 57" stroke-width="15"/>
+    <!-- 눈금 3·6·9 -->
+    <path d="M186 100 H172 M100 186 V172 M14 100 H28" stroke-width="6"/>
+    <!-- 바늘 -->
+    <path d="M100 100 L152 70" stroke-width="11"/>
+  </g>
+  <circle cx="100" cy="100" r="9" fill="#111111"/>
+</svg>

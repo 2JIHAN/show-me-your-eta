@@ -1,16 +1,26 @@
-<div align="center">
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo.svg" width="120" alt="show-me-your-eta">
+  </picture>
+</p>
 
-# show-me-your-eta
+<h1 align="center">show-me-your-eta</h1>
 
-**Your coding agent tells you when it will be done — and gets better at it every turn.**
+<p align="center">
+  <em>Your coding agent tells you when it will be done — and gets better at it every turn.</em>
+</p>
 
-[![skills.sh](https://skills.sh/b/2JIHAN/show-me-your-eta)](https://skills.sh/2JIHAN/show-me-your-eta)
-[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
-[![No dependencies](https://img.shields.io/badge/dependencies-none-black.svg)](turn-eta/scripts/eta.js)
+<p align="center">
+  <a href="https://skills.sh/2JIHAN/show-me-your-eta"><img src="https://skills.sh/b/2JIHAN/show-me-your-eta" alt="skills.sh"></a>
+  <img src="https://img.shields.io/badge/works%20with-any%20agent-111111?style=flat-square" alt="Works with any agent">
+  <img src="https://img.shields.io/badge/dependencies-none-111111?style=flat-square" alt="No dependencies">
+  <img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT license">
+</p>
 
-English · [한국어](README.ko.md)
-
-</div>
+<p align="center">
+  English · <a href="README.ko.md">한국어</a>
+</p>
 
 ---
 
