@@ -29,7 +29,7 @@
 더 맞게 만듭니다.
 
 <p align="center">
-  <img src="assets/demo.gif" alt="A turn opening with a numbered plan and a finish time, the ETA moving as each step lands" width="860">
+  <img src="assets/demo.gif" alt="A turn opening with a numbered plan and a finish time, the ETA moving as each step lands" width="880">
 </p>
 
 <table>
