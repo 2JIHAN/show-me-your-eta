@@ -48,9 +48,8 @@ node <skill>/scripts/eta.js plan \
 
 # each time a step lands — measured, and the rest is re-forecast from the measured pace
 node <skill>/scripts/eta.js step 48i35qek
-# |#|step|worktime|eta|change|
-# |-|-|-|-|-|
-# |2/4|fix the date parser|8m 06s|17:49|+4|
+# 2/4 fix the date parser — 8m 06s
+# **ETA 17:49** (4 min later)
 
 # when the turn's work is done
 node <skill>/scripts/eta.js done 48i35qek
@@ -108,3 +107,7 @@ with at least 3 finished turns:
 
 Median rather than mean, so one turn that ran long does not drag every future estimate with it. Only
 the last 20 turns per rung count. `plan` prints which rung it used, so the number is never a mystery.
+
+Mid-turn, `step` blends that history with the pace this turn is actually running at, weighted by how
+much of the turn is done: at step 1 of 4 the history still carries three quarters, by step 3 this turn
+carries three quarters. One slow first step moves the finish time without hijacking it.

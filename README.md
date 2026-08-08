@@ -97,14 +97,12 @@ Both land before the work starts, so you can cut step 3 while cutting it is stil
 **5. Each step is timed as it lands, and the rest is re-forecast**
 
 ```
-|#|step|worktime|eta|change|
-|-|-|-|-|-|
-|2/4|fix the date parser|8m 06s|17:49|+4|
+2/4 fix the date parser — 8m 06s
+**ETA 17:49** (4 min later)
 ```
 
-`change` is how many minutes the finish time moved since the last row — that step ran long, so
-everything after it shifted. Whether you watch this happen or only see it at the end depends on your
-agent; most send one message per turn.
+That step ran long, so the finish time moved with it. Whether you watch this happen or only see it at
+the end depends on your agent; most send one message per turn.
 
 **6. When it finishes, you get the real time**
 
@@ -184,6 +182,10 @@ turns:
 
 Median rather than mean, so one turn that ran long does not drag every future estimate with it. Last 20
 turns per rung. The rung it used is printed every time, so you can see where the number came from.
+
+Mid-turn the forecast is a blend: the history above, weighted against the pace this turn is running at,
+by how much of the turn is done. At step 1 of 4 the history still carries three quarters; by step 3
+this turn carries three quarters. A slow first step moves the finish time without hijacking it.
 
 Point `TURN_ETA_DIR` at another `.eta` directory to let a fresh project borrow from an old one. It is
 only consulted when the local log has nothing to say.

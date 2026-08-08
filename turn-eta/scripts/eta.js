@@ -288,19 +288,25 @@ function step(opt, id, now = Date.now()) {
 
   const observed = spent / doneSteps
   const left = Math.max(0, row.steps - doneSteps)
-  const eta = now + Math.round(observed * left) * MS
-  // How far the finish time moved since the last forecast. Without it the reader has to remember
-  // the old number to notice the slip.
+
+  // Trusting this turn alone means one slow first step drags the whole forecast with it. Weight it
+  // by how much of the turn is actually done: at step 1 of 4 the history still carries three
+  // quarters, by step 3 this turn carries three quarters, and at the end history is gone.
+  const prior = pace(opt.root, opt, opt.shared).min
+  const w = doneSteps / row.steps
+  const blended = prior * (1 - w) + observed * w
+  const eta = now + Math.round(blended * left) * MS
+
   const prev = Date.parse(row.eta)
-  const change = Number.isFinite(prev) ? Math.round((eta - prev) / MS) : 0
+  const moved = Number.isFinite(prev) ? Math.round((eta - prev) / MS) : 0
   row.eta = iso(eta)
   save(file, rows)
 
+  const drift =
+    moved === 0 ? 'on track' : `${Math.abs(moved)} min ${moved > 0 ? 'later' : 'earlier'}`
   const text = [
-    '|#|step|worktime|eta|change|',
-    '|-|-|-|-|-|',
-    `|${doneSteps}/${row.steps}|${row.names[doneSteps - 1] ?? ''}|${hms(row.stepMins[doneSteps - 1])}|` +
-      `${clock(eta)}|${change >= 0 ? '+' : ''}${change}|`,
+    `${doneSteps}/${row.steps} ${row.names[doneSteps - 1] ?? ''} — ${hms(row.stepMins[doneSteps - 1])}`,
+    left ? `**ETA ${clock(eta)}** (${drift})` : `last step — wrap up and run done`,
   ].join('\n')
 
   return { id: row.id, text, remaining: left }
@@ -444,12 +450,28 @@ function selftest() {
 
   // steps are measured one by one and the forecast follows the measured pace
   const s1 = step(o(), first.id, t0 + 2 * MS)
-  assert.ok(s1.text.startsWith('|#|step|worktime|eta|change|'), s1.text) // header + one row
-  assert.strictEqual(s1.text.split('\n').length, 3, s1.text)
-  assert.ok(s1.text.includes('|1/3|read the test|2m 00s|'), s1.text)
-  assert.ok(/\|[+-]\d+\|$/.test(s1.text.split('\n')[2]), s1.text) // the change column is signed
+  assert.strictEqual(s1.text.split('\n').length, 2, s1.text) // the step, then the eta on its own line
+  assert.strictEqual(s1.text.split('\n')[0], '1/3 read the test — 2m 00s', s1.text)
+  assert.ok(/^\*\*ETA \d\d:\d\d\*\* \((on track|\d+ min (earlier|later))\)$/.test(s1.text.split('\n')[1]), s1.text)
   const s2 = step(o(), first.id, t0 + 4 * MS)
-  assert.ok(s2.text.includes('|2/3|fix the parser|'), s2.text)
+  assert.ok(s2.text.startsWith('2/3 fix the parser — 2m 00s'), s2.text)
+
+  // a slow first step must not drag the whole forecast: the history still carries most of the weight
+  const slowRoot = path.join(tmp, 'slow', '.eta')
+  const so = { ...o(), root: slowRoot }
+  for (let i = 0; i < 3; i++) {
+    const q = plan(so, ['a', 'b', 'c', 'd'], t0)
+    done(so, q.id, t0 + 4 * MS) // 1 min per step, three times over
+  }
+  const slow = plan(so, ['a', 'b', 'c', 'd'], t0)
+  const afterSlow = step(so, slow.id, t0 + 4 * MS) // first step alone took 4 min
+  const naive = 4 * 3 // this turn's pace applied to the three that remain
+  const blendedEta = Date.parse(afterSlow.eta ?? '') // not exported; read the row instead
+  const row2 = load(logPathFor(slowRoot, 'anthropic', 'claude-opus-5')).pop()
+  const ahead = Math.round((Date.parse(row2.eta) - (t0 + 4 * MS)) / MS)
+  assert.ok(ahead < naive, `blended ${ahead} min should undercut the naive ${naive} min`)
+  assert.ok(ahead > 3, `and still exceed the historical ${3} min: ${ahead}`)
+  done(so, slow.id, t0 + 5 * MS)
   const closed = done(o(), first.id, t0 + 6 * MS)
   assert.strictEqual(closed.actual, 6)
   assert.ok(closed.text.includes('estimated 12 min / actual 6 min'), closed.text)
