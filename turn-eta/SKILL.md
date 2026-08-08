@@ -56,7 +56,7 @@ node <skill>/scripts/eta.js step 48i35qek
 
 # when the turn's work is done
 node <skill>/scripts/eta.js done 48i35qek
-# **finished 17:48** (estimated 14 min / actual 17 min)
+# **FINISHED 17:48** (estimated 14 min / actual 17 min)
 
 # what the log says right now
 node <skill>/scripts/eta.js stats

@@ -338,7 +338,7 @@ function done(opt, id, now = Date.now()) {
   // A markdown table, because this text gets pasted into a reply. Lining columns up by hand
   // means counting terminal cells, and a Korean step name is two cells wide per character.
   // The per-step table lives in the log; the closing line is what the reply ends on.
-  const lines = [`**finished ${clock(now)}** (estimated ${row.est} min / actual ${actual} min)`]
+  const lines = [`**FINISHED ${clock(now)}** (estimated ${row.est} min / actual ${actual} min)`]
   return { id: row.id, actual, text: lines.join('\n') }
 }
 
@@ -484,7 +484,7 @@ function selftest() {
   assert.strictEqual(closed.actual, 6)
   assert.ok(closed.text.includes('estimated 12 min / actual 6 min'), closed.text)
   assert.ok(!/spot on|long|short/.test(closed.text), closed.text) // the numbers say it; no verdict
-  assert.ok(/^\*\*finished \d\d:\d\d\*\* /.test(closed.text), closed.text)
+  assert.ok(/^\*\*FINISHED \d\d:\d\d\*\* /.test(closed.text), closed.text)
   assert.strictEqual(closed.text.split('\n').length, 1, closed.text) // one closing line, no table
   const row = load(logPathFor(root, 'anthropic', 'claude-opus-5')).pop()
   assert.deepStrictEqual(row.stepMins, [2, 2, 2], JSON.stringify(row.stepMins))

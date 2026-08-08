@@ -108,7 +108,7 @@ the end depends on your agent; most send one message per turn.
 **6. When it finishes, you get the real time**
 
 ```
-**finished 17:48** (estimated 14 min / actual 17 min)
+**FINISHED 17:48** (estimated 14 min / actual 17 min)
 ```
 
 An estimate is only worth printing while the work is still running. Once it is done, the honest closing
