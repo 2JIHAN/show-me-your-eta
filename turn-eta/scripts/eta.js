@@ -171,6 +171,13 @@ function bias(root, opt) {
   return { n: rows.length, off: Math.round(median(rows.map((r) => r.est - r.actual))) }
 }
 
+// A turn is only open in the project it was planned in. Say which one we looked in — the usual
+// cause is a shell that changed directory between plan and done, and "no open turn" hides that.
+function notFound(opt, id, what) {
+  const where = `looked in ${opt.root}`
+  return id ? `turn ${id} is not open here — ${where}` : `no open turn to ${what} — ${where}`
+}
+
 // ---------- clock ----------
 
 const clock = (ms) => {
@@ -264,7 +271,7 @@ function step(opt, id, now = Date.now()) {
   const file = activeLog(opt)
   const rows = load(file)
   const row = pick(rows, id, now)
-  if (!row) throw new Error('no open turn to step — run plan first')
+  if (!row) throw new Error(notFound(opt, id, 'step'))
 
   const spent = (now - Date.parse(row.start)) / MS
   const before = row.stepMins.reduce((a, b) => a + b, 0)
@@ -289,7 +296,7 @@ function done(opt, id, now = Date.now()) {
   const file = activeLog(opt)
   const rows = load(file)
   const row = pick(rows, id, now)
-  if (!row) throw new Error('no open turn to close')
+  if (!row) throw new Error(notFound(opt, id, 'close'))
 
   const actual = Math.max(1, Math.round((now - Date.parse(row.start)) / MS))
   row.end = iso(now)
@@ -491,6 +498,7 @@ function selftest() {
 
   // closing without an open turn is an error, not a silent no-op
   assert.throws(() => step({ ...o(), root: path.join(tmp, 'empty') }, undefined, t0), /no open turn/)
+  assert.throws(() => step(o(), 'nosuchid', t0), /not open here — looked in/)
 
   fs.rmSync(tmp, { recursive: true, force: true })
   console.log('selftest passed')
