@@ -19,7 +19,8 @@ estimate reads that log.
   the turn's work is finished.
 - **The last paragraph is a time too, and which time depends on whether anything is still running.**
   - Everything finished before you write the reply → the whole block `done` prints: the finish line
-    and the per-step table under it, pasted as it comes out. By then the ETA has expired; reprinting it hands the reader a
+    the per-step table with the finish line under it, pasted in that order — the reply ends on the
+    finish line. By then the ETA has expired; reprinting it hands the reader a
     guess the clock already disproved, while the per-step times show where it went wrong.
   - Something is still running (a background job, a delegated task) → the forecast: `ETA: 17:45`.
     Recompute it as you write, never paste the number `plan` printed earlier.
@@ -53,14 +54,14 @@ node <skill>/scripts/eta.js step 48i35qek
 
 # when the turn's work is done
 node <skill>/scripts/eta.js done 48i35qek
-# finished: 17:48 (estimated 14 min / actual 17 min)
-#
 # | # | step | min |
 # |---|------|-----|
 # | 1 | reproduce the failure | 3.2 |
 # | 2 | fix the date parser | 8.1 |
 # | 3 | update the fixtures | 1.9 |
 # | 4 | re-run the suite | 3.8 |
+#
+# finished: 17:48 (estimated 14 min / actual 17 min)
 
 # what the log says right now
 node <skill>/scripts/eta.js stats

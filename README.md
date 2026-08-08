@@ -107,14 +107,14 @@ depends on your agent — most send one message per turn.
 **6. When it finishes, you get the real time and where it went**
 
 ```
-finished: 17:48 (estimated 14 min / actual 17 min)
-
 | # | step | min |
 |---|------|-----|
 | 1 | reproduce the failure | 3.2 |
 | 2 | fix the date parser | 8.1 |
 | 3 | update the fixtures | 1.9 |
 | 4 | re-run the suite | 3.8 |
+
+finished: 17:48 (estimated 14 min / actual 17 min)
 ```
 
 An estimate is only worth printing while the work is still running. Once it is done, the honest closing
