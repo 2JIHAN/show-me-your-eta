@@ -233,11 +233,13 @@ function plan(opt, names, now = Date.now()) {
   const { id, est, p, steps } = openRow(file, opt, names, now)
   const b = bias(opt.root, opt)
   const out = [
+    // The finish time leads. It is the one line the reader came for, and a plan that buries it
+    // reads as a to-do list — the steps below are the reasoning behind the number, not the point.
+    `${etaLine(now + est * MS)} (${est} min)`,
+    '',
     ...names.map((n, i) => `${i + 1}. ${n}`),
     '',
     `${steps} steps, ~${est} min (${round1(p.min)} min/step from ${p.from}, ${p.n} turns)`,
-    '',
-    `${etaLine(now + est * MS)} (${est} min)`,
     '',
   ]
   if (b) out.push(`(last ${b.n} estimates ran ${Math.abs(b.off)} min ${b.off > 0 ? 'long' : 'short'})`)
@@ -449,10 +451,11 @@ function selftest() {
   assert.ok(first.text.includes('from default'), first.text)
   assert.strictEqual(first.est, 12)
   assert.ok(/\*\*ETA \d\d:\d\d\*\*/.test(first.text), first.text)
-  assert.ok(first.text.startsWith('1. read the test\n2. fix the parser\n3. re-run\n'), first.text)
+  assert.ok(first.text.includes('\n1. read the test\n2. fix the parser\n3. re-run\n'), first.text)
   const planLines = first.text.split('\n')
   const etaAt = planLines.findIndex((l) => l.startsWith('**ETA '))
-  assert.ok(etaAt > 0 && planLines[etaAt - 1] === '' && planLines[etaAt + 1] === '', first.text)
+  assert.strictEqual(etaAt, 0, first.text) // the finish time leads, on its own line
+  assert.strictEqual(planLines[1], '', first.text)
   assert.ok(/^\*\*ETA \d\d:\d\d\*\* \(12 min\)$/.test(planLines[etaAt]), planLines[etaAt]) // how long, not just when
 
   // steps are measured one by one and the forecast follows the measured pace

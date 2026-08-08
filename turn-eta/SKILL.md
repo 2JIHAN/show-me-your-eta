@@ -14,10 +14,10 @@ estimate reads that log.
 
 **Every turn that contains real work** — editing a file, running a command, searching the codebase.
 
-- Work in the turn → call `plan` **before** starting and open your reply with the numbered plan it
-  prints, **including its `**ETA …**` line, kept as its own paragraph**. The plan is what the reader checks before the work happens, and
-  a plan without a finish time is half a plan. Call `step <id>` as each step lands, and `done <id>` when
-  the turn's work is finished.
+- Work in the turn → call `plan` **before** starting and open your reply with what it prints, in the
+  order it prints it: **the `**ETA …**` line first, on its own, then the numbered steps**. The finish
+  time is what the reader came for; the steps below are the reasoning behind it. Call `step <id>` as
+  each step lands, and `done <id>` when the turn's work is finished.
 - **The last paragraph is a time too, and which time depends on whether anything is still running.**
   - Everything finished before you write the reply → the whole block `done` prints: the finish line
     the finish line from `done`. By then the ETA has expired; reprinting it hands the reader a
@@ -37,14 +37,14 @@ node <skill>/scripts/eta.js plan \
   "reproduce the failure" "fix the date parser" "update the fixtures" "re-run the suite" \
   --provider anthropic --model claude-opus-5 --size M
 
+# **ETA 17:45** (14 min)
+#
 # 1. reproduce the failure
 # 2. fix the date parser
 # 3. update the fixtures
 # 4. re-run the suite
 #
 # 4 steps, ~14 min (3.5 min/step from anthropic/claude-opus-5 M, 6 turns)
-#
-# **ETA 17:45** (14 min)
 #
 # (last 6 estimates ran 3 min long)
 # turn id: 48i35qek
