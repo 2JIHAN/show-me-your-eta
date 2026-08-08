@@ -46,14 +46,14 @@
 
 </td><td>
 
+> **예상 종료시각: 17:45** (14분)
+>
 > 1. 실패 재현
 > 2. 날짜 파서 고치기
 > 3. 픽스처 맞추기
 > 4. 테스트 다시 돌리기
 >
 > *…작업…*
->
-> **예상 종료시각: 17:45** (14분)
 
 </td></tr>
 </table>
@@ -87,15 +87,15 @@ echo ".eta/" >> .gitignore
 > 결제 테스트 깨졌어, 고쳐줘
 ```
 
-**4. 번호 붙인 계획과 끝날 시각을 먼저 내놓습니다**
+**4. 끝날 시각을 먼저, 그 근거인 계획을 아래에 내놓습니다**
 
 ```
+**예상 종료시각: 17:45** (14분)
+
 1. 실패 재현
 2. 날짜 파서 고치기
 3. 픽스처 맞추기
 4. 테스트 다시 돌리기
-
-**예상 종료시각: 17:45** (14분)
 ```
 
 둘 다 일을 시작하기 전에 나옵니다. 그래서 3번은 빼라고 아직 공짜일 때 자를 수 있습니다.
@@ -214,26 +214,47 @@ cat <<TXT
 이번 턴에 실제 작업이 있으면 $S/SKILL.md 대로 한다.
 
 - 시작 전에 \`$E plan "첫 스텝" "둘째 스텝" … --provider <p> --model <m> --size S|M|L\`
-- 찍혀 나온 번호 목록과 \`ETA:\` 줄로 답변을 연다
+- 찍혀 나온 것을 그 순서대로 답변 맨 위에 적는다 — \`**ETA …**\` 줄이 먼저, 그 아래 번호 목록
 - 스텝이 끝날 때마다 \`$E step <턴id>\`, 끝나면 \`$E done <턴id>\` — id는 필수다
 - 답변은 \`done\`이 찍어 준 끝난 시각 줄로 닫는다
 TXT
 exit 0
 ```
 
-`.claude/settings.json`에 등록합니다.
+밀어 넣는 건 텍스트일 뿐이고, 그걸 지켰는지는 아무도 안 봅니다. `plan`을 부르고도 출력을 답변에 안 적고
+`done`도 안 부르면, 밖에서 보기엔 스킬이 아예 안 돈 것과 똑같습니다. 그 구멍을 막으려고 스킬에
+`hooks/eta-gate.js`가 같이 딸려 옵니다. 계획이 없는 상태에서 그 입력의 **첫 `Edit`·`Write`를 한 번 막고**,
+답이 둘 중 무엇인지 알려 주고, 어느 쪽을 고르든 재시도는 통과시킵니다.
+
+대신 훅이 판단하지는 않습니다. 셸 스크립트가 네 스텝짜리 리팩터링과 오타 수정을 구별할 수 없으니까요.
+같은 입력을 두 번 막지도 않습니다. 코드를 읽는 것도 안 막습니다 — matcher에 `Bash`가 있는 건 `plan`이
+불리는 걸 **보려고** 넣은 것이지 명령을 막으려는 게 아닙니다.
+
+`.claude/settings.json`에 둘 다 등록합니다.
 
 ```json
 {
   "hooks": {
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/inject-turn-eta.sh\"" }] }
+      { "hooks": [
+        { "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/inject-turn-eta.sh\"" },
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Edit|Write|Bash", "hooks": [
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
     ]
   }
 }
 ```
 
-훅은 클로드 코드를 다시 켜야 먹습니다.
+두 시점이 다 있어야 합니다. 다음 입력에서 문을 다시 여는 건 `UserPromptSubmit` 쪽이라, `PreToolUse`만
+등록하면 한 번 닫히고 영영 안 열리는 문이 됩니다.
+
+훅은 클로드 코드를 다시 켜야 먹습니다. 세션 없이 확인하려면
+`node turn-eta/hooks/eta-gate.js --selftest`.
 
 </details>
 

@@ -45,14 +45,14 @@ makes them lay out the steps and a finish time first, then checks that time agai
 
 </td><td>
 
+> **ETA 17:45** (14 min)
+>
 > 1. reproduce the failure
 > 2. fix the date parser
 > 3. update the fixtures
 > 4. re-run the suite
 >
 > *…work…*
->
-> **ETA 17:45** (14 min)
 
 </td></tr>
 </table>
@@ -85,15 +85,15 @@ echo ".eta/" >> .gitignore
 > the checkout tests are failing, fix them
 ```
 
-**4. It opens with a numbered plan and a finish time**
+**4. It opens with a finish time, then the plan behind it**
 
 ```
+**ETA 17:45** (14 min)
+
 1. reproduce the failure
 2. fix the date parser
 3. update the fixtures
 4. re-run the suite
-
-**ETA 17:45** (14 min)
 ```
 
 Both land before the work starts, so you can cut step 3 while cutting it is still free.
@@ -212,26 +212,47 @@ cat <<TXT
 If this turn contains real work, follow $S/SKILL.md.
 
 - Before starting: \`$E plan "first step" "second step" … --provider <p> --model <m> --size S|M|L\`
-- Open the reply with the numbered list and the \`ETA:\` line it prints
+- Open the reply with what it prints, in that order: the \`**ETA …**\` line, then the numbered steps
 - \`$E step <turn id>\` as each step lands, \`$E done <turn id>\` at the end — the id is required
 - Close the reply with what \`done\` prints: the finish line
 TXT
 exit 0
 ```
 
-Register it in `.claude/settings.json`:
+A reminder is only text, and nothing checks that it was followed — a turn can call `plan`, keep the
+output to itself, never call `done`, and from the outside look like the skill never ran. The skill
+ships `hooks/eta-gate.js` to close that hole. It stops the first `Edit` or `Write` of each prompt
+while no plan exists, says what the two answers are, and lets the retry through either way.
+
+It never decides for the agent — a shell script cannot tell a four-step refactor from a typo fix —
+and it never stops the same prompt twice. Reading the codebase is not gated either: `Bash` is in the
+matcher so the hook can *see* `plan` being called, not to block commands.
+
+Register both in `.claude/settings.json`:
 
 ```json
 {
   "hooks": {
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/inject-turn-eta.sh\"" }] }
+      { "hooks": [
+        { "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/inject-turn-eta.sh\"" },
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Edit|Write|Bash", "hooks": [
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
     ]
   }
 }
 ```
 
-Restart Claude Code for the hook to take effect.
+Both events matter. `UserPromptSubmit` is what opens the gate again for the next prompt, so
+registering only `PreToolUse` leaves a gate that never closes — and one that never opens.
+
+Restart Claude Code for the hooks to take effect. Check them without a session:
+`node turn-eta/hooks/eta-gate.js --selftest`.
 
 </details>
 
