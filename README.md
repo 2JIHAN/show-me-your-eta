@@ -105,10 +105,13 @@ ETA: 17:49
 
 ```
 finished: 17:48 (estimated 14 min / actual 17 min)
-  1. reproduce the failure  3.2 min
-  2. fix the date parser    8.1 min
-  3. update the fixtures    1.9 min
-  4. re-run the suite       3.8 min
+
+| # | step | min |
+|---|------|-----|
+| 1 | reproduce the failure | 3.2 |
+| 2 | fix the date parser | 8.1 |
+| 3 | update the fixtures | 1.9 |
+| 4 | re-run the suite | 3.8 |
 ```
 
 An estimate is only worth printing while the work is still running. Once it is done, the honest closing

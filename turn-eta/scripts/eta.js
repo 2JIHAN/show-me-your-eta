@@ -312,13 +312,17 @@ function done(opt, id, now = Date.now()) {
   //
   // The per-step times come out here too. They are the only part of the record that says *where*
   // the estimate went wrong, and leaving them in the log means nobody ever reads them.
-  const lines = [`finished: ${clock(now)} (estimated ${row.est} min / actual ${actual} min)`]
-  const width = Math.max(0, ...row.names.map((n) => n.length))
-  row.names.forEach((name, i) => {
-    lines.push(`  ${i + 1}. ${name.padEnd(width)}  ${round1(row.stepMins[i] ?? 0)} min`)
-  })
+  // A markdown table, because this text gets pasted into a reply. Lining columns up by hand
+  // means counting terminal cells, and a Korean step name is two cells wide per character.
+  const lines = [
+    `finished: ${clock(now)} (estimated ${row.est} min / actual ${actual} min)`,
+    '',
+    '| # | step | min |',
+    '|---|------|-----|',
+    ...row.names.map((name, i) => `| ${i + 1} | ${name} | ${round1(row.stepMins[i] ?? 0)} |`),
+  ]
   const tail = row.stepMins[row.names.length]
-  if (tail) lines.push(`  ${' '.repeat(String(row.names.length).length)}  ${'wrap-up'.padEnd(width)}  ${round1(tail)} min`)
+  if (tail) lines.push(`| – | wrap-up | ${round1(tail)} |`)
   return { id: row.id, actual, text: lines.join('\n') }
 }
 
@@ -444,9 +448,9 @@ function selftest() {
   assert.ok(closed.text.includes('estimated 12 min / actual 6 min'), closed.text)
   assert.ok(!/spot on|long|short/.test(closed.text), closed.text) // the numbers say it; no verdict
   assert.ok(/^finished: \d\d:\d\d /.test(closed.text), closed.text) // a clock time, not a forecast
-  assert.ok(closed.text.includes('1. read the test'), closed.text) // per-step times, not just the total
-  assert.ok(closed.text.includes('3. re-run'), closed.text)
-  assert.strictEqual(closed.text.split('\n').length, 4, closed.text)
+  assert.ok(closed.text.includes('| 1 | read the test | 2 |'), closed.text) // per-step, as a table
+  assert.ok(closed.text.includes('| 3 | re-run | 2 |'), closed.text)
+  assert.strictEqual(closed.text.split('\n').length, 7, closed.text)
   const row = load(logPathFor(root, 'anthropic', 'claude-opus-5')).pop()
   assert.deepStrictEqual(row.stepMins, [2, 2, 2], JSON.stringify(row.stepMins))
   assert.deepStrictEqual(row.names, names3, JSON.stringify(row.names))
