@@ -1,5 +1,6 @@
 ---
 name: turn-eta
+version: "0.1.0"
 description: When a turn contains real work (editing files, running commands, digging through code), split it into steps, tell the user how many and when it will be done, time each step, and record the miss so the next estimate is closer. Skip it on conversation-only turns.
 ---
 
