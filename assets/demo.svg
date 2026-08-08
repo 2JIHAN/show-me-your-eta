@@ -3,7 +3,7 @@
 <circle cx="24" cy="24" r="6" fill="#ff5f57"/>
 <circle cx="44" cy="24" r="6" fill="#febc2e"/>
 <circle cx="64" cy="24" r="6" fill="#28c840"/>
-<text x="430.0" y="29" fill="#6e7681" text-anchor="middle" font-size="12">claude — does-homepage</text>
+<text x="430.0" y="29" fill="#6e7681" text-anchor="middle" font-size="12">claude — shop-api</text>
 <g opacity="0"><text x="26.0" y="72" fill="#6e7681">&gt;</text><text x="44.0" y="72" fill="#c9d1d9">the checkout tests are failing, fix them</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.0118;0.0268;1" dur="17.0s" repeatCount="indefinite"/></g>
 <g opacity="0"><text x="26.0" y="97" fill="#d97757">⏺</text><text x="44.0" y="97" fill="#e6edf3">1. reproduce the failure</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.0765;0.0915;1" dur="17.0s" repeatCount="indefinite"/></g>
 <g opacity="0"><text x="42.8" y="122" fill="#e6edf3">2. fix the date parser</text><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.0882;0.1032;1" dur="17.0s" repeatCount="indefinite"/></g>
