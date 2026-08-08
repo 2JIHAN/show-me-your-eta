@@ -18,9 +18,9 @@ estimate reads that log.
   a plan without a finish time is half a plan. Call `step <id>` as each step lands, and `done <id>` when
   the turn's work is finished.
 - **The last paragraph is a time too, and which time depends on whether anything is still running.**
-  - Everything finished before you write the reply → the finish line from `done`:
-    `finished: 16:21 (estimated 1 min / actual 3 min)`. By then the ETA has expired;
-    reprinting it hands the reader a guess that the clock already disproved.
+  - Everything finished before you write the reply → the whole block `done` prints: the finish line
+    and the per-step times under it. By then the ETA has expired; reprinting it hands the reader a
+    guess the clock already disproved, while the per-step times show where it went wrong.
   - Something is still running (a background job, a delegated task) → the forecast: `ETA: 17:45`.
     Recompute it as you write, never paste the number `plan` printed earlier.
 - Conversation-only turn (answering a question, deciding what to build) → do nothing. It is noise.
@@ -54,6 +54,10 @@ node <skill>/scripts/eta.js step 48i35qek
 # when the turn's work is done
 node <skill>/scripts/eta.js done 48i35qek
 # finished: 17:48 (estimated 14 min / actual 17 min)
+#   1. reproduce the failure  3.2 min
+#   2. fix the date parser    8.1 min
+#   3. update the fixtures    1.9 min
+#   4. re-run the suite       3.8 min
 
 # what the log says right now
 node <skill>/scripts/eta.js stats

@@ -309,7 +309,17 @@ function done(opt, id, now = Date.now()) {
   // The reply is written after the work is finished, so the closing line is a finish time,
   // not a forecast. Printing the old ETA there would date-stamp a guess that already expired.
   // The two numbers say how far off it was; naming the gap on top of them is padding.
-  return { id: row.id, actual, text: `finished: ${clock(now)} (estimated ${row.est} min / actual ${actual} min)` }
+  //
+  // The per-step times come out here too. They are the only part of the record that says *where*
+  // the estimate went wrong, and leaving them in the log means nobody ever reads them.
+  const lines = [`finished: ${clock(now)} (estimated ${row.est} min / actual ${actual} min)`]
+  const width = Math.max(0, ...row.names.map((n) => n.length))
+  row.names.forEach((name, i) => {
+    lines.push(`  ${i + 1}. ${name.padEnd(width)}  ${round1(row.stepMins[i] ?? 0)} min`)
+  })
+  const tail = row.stepMins[row.names.length]
+  if (tail) lines.push(`  ${' '.repeat(String(row.names.length).length)}  ${'wrap-up'.padEnd(width)}  ${round1(tail)} min`)
+  return { id: row.id, actual, text: lines.join('\n') }
 }
 
 function stats(opt) {
@@ -434,6 +444,9 @@ function selftest() {
   assert.ok(closed.text.includes('estimated 12 min / actual 6 min'), closed.text)
   assert.ok(!/spot on|long|short/.test(closed.text), closed.text) // the numbers say it; no verdict
   assert.ok(/^finished: \d\d:\d\d /.test(closed.text), closed.text) // a clock time, not a forecast
+  assert.ok(closed.text.includes('1. read the test'), closed.text) // per-step times, not just the total
+  assert.ok(closed.text.includes('3. re-run'), closed.text)
+  assert.strictEqual(closed.text.split('\n').length, 4, closed.text)
   const row = load(logPathFor(root, 'anthropic', 'claude-opus-5')).pop()
   assert.deepStrictEqual(row.stepMins, [2, 2, 2], JSON.stringify(row.stepMins))
   assert.deepStrictEqual(row.names, names3, JSON.stringify(row.names))

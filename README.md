@@ -101,14 +101,18 @@ step 2/4 done in 4.1 min — fix the date parser (3.8 min/step so far) (next: up
 ETA: 17:49
 ```
 
-**6. When it finishes, you get the real time and the miss**
+**6. When it finishes, you get the real time and where it went**
 
 ```
 finished: 17:48 (estimated 14 min / actual 17 min)
+  1. reproduce the failure  3.2 min
+  2. fix the date parser    8.1 min
+  3. update the fixtures    1.9 min
+  4. re-run the suite       3.8 min
 ```
 
 An estimate is only worth printing while the work is still running. Once it is done, the honest closing
-line is the clock.
+line is the clock — and the per-step times say which step ate the estimate.
 
 **7. A few turns later, the estimate is yours, not a guess**
 
