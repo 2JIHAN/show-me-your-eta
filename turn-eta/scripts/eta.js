@@ -264,12 +264,12 @@ function logHolding(root, id) {
 
 // `plan` is told the provider and model; `step` and `done` should not have to repeat them.
 // With an id, the log that holds it wins. Without one, follow the most recently opened turn here.
-function activeLog(opt, id) {
+function activeLog(opt, id, now = Date.now()) {
   const held = logHolding(opt.root, id)
   if (held) return held
   if (opt.explicit) return logPathFor(opt.root, opt.provider, opt.model)
   const open = scan(opt.root)
-    .map((f) => ({ file: f.file, rows: openRows(load(f.file)).filter((r) => Date.now() - Date.parse(r.start) < STALE_MS) }))
+    .map((f) => ({ file: f.file, rows: openRows(load(f.file)).filter((r) => now - Date.parse(r.start) < STALE_MS) }))
     .filter((f) => f.rows.length)
     .sort((a, b) => Date.parse(a.rows[a.rows.length - 1].start) - Date.parse(b.rows[b.rows.length - 1].start))
     .pop()
@@ -295,7 +295,7 @@ function pick(rows, id, now = Date.now()) {
 
 // One step done: measure what it actually took and re-forecast the rest from that pace.
 function step(opt, id, now = Date.now()) {
-  const file = activeLog(opt, id)
+  const file = activeLog(opt, id, now)
   const rows = load(file)
   const row = pick(rows, id, now)
   if (!row) throw new Error(notFound(opt, id, 'step'))
@@ -333,7 +333,7 @@ function step(opt, id, now = Date.now()) {
 }
 
 function done(opt, id, now = Date.now()) {
-  const file = activeLog(opt, id)
+  const file = activeLog(opt, id, now)
   const rows = load(file)
   const row = pick(rows, id, now)
   if (!row) throw new Error(notFound(opt, id, 'close'))
