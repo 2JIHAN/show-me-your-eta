@@ -249,9 +249,24 @@ function plan(opt, names, now = Date.now()) {
 
 const openRows = (rows) => rows.filter((r) => r.state === 'open')
 
+// An id names exactly one turn, so look for that turn instead of guessing which log it is in.
+// Guessing used to send `done <id>` into whichever log was touched last — another agent's, in
+// another provider's folder — where the id it was handed does not exist. The call failed and the
+// turn it was asked to close stayed open, which is the one thing `done` exists to prevent.
+function logHolding(root, id) {
+  if (!id) return null
+  const files = scan(root)
+  const holds = (state) =>
+    files.find((f) => load(f.file).some((r) => r.id === id && (!state || r.state === state)))
+  const found = holds('open') || holds(null)
+  return found ? found.file : null
+}
+
 // `plan` is told the provider and model; `step` and `done` should not have to repeat them.
-// Without the flags, follow the most recently opened turn in this project.
-function activeLog(opt) {
+// With an id, the log that holds it wins. Without one, follow the most recently opened turn here.
+function activeLog(opt, id) {
+  const held = logHolding(opt.root, id)
+  if (held) return held
   if (opt.explicit) return logPathFor(opt.root, opt.provider, opt.model)
   const open = scan(opt.root)
     .map((f) => ({ file: f.file, rows: openRows(load(f.file)).filter((r) => Date.now() - Date.parse(r.start) < STALE_MS) }))
@@ -280,7 +295,7 @@ function pick(rows, id, now = Date.now()) {
 
 // One step done: measure what it actually took and re-forecast the rest from that pace.
 function step(opt, id, now = Date.now()) {
-  const file = activeLog(opt)
+  const file = activeLog(opt, id)
   const rows = load(file)
   const row = pick(rows, id, now)
   if (!row) throw new Error(notFound(opt, id, 'step'))
@@ -318,7 +333,7 @@ function step(opt, id, now = Date.now()) {
 }
 
 function done(opt, id, now = Date.now()) {
-  const file = activeLog(opt)
+  const file = activeLog(opt, id)
   const rows = load(file)
   const row = pick(rows, id, now)
   if (!row) throw new Error(notFound(opt, id, 'close'))
@@ -543,6 +558,20 @@ function selftest() {
   assert.strictEqual(step(o(), a1.id, t0 + MS).id, a1.id, 'a named id still works with two open')
   done(o(), a1.id, t0 + MS)
   done(o(), a2.id, t0 + MS)
+
+  // an id is followed into the log that holds it, not into whichever log was written last
+  const mixed = path.join(tmp, 'mixed', '.eta')
+  const mine = { ...o(), root: mixed }
+  const theirs = { ...o({ provider: 'openai', model: 'gpt-5-codex' }), root: mixed }
+  const ours = plan(mine, ['a', 'b'], t0)
+  plan(theirs, ['x', 'y'], t0 + MS) // another agent opens a turn later, in another provider's folder
+  const bare2 = { provider: 'unknown', model: 'unknown', size: 'M', root: mixed, shared: null, explicit: false }
+  assert.strictEqual(done(bare2, ours.id, t0 + 2 * MS).id, ours.id, 'done <id> must find its own log')
+  assert.strictEqual(
+    load(logPathFor(mixed, 'anthropic', 'claude-opus-5')).find((r) => r.id === ours.id).state,
+    'done',
+    'and close the turn there, not fail against someone else\'s log'
+  )
 
   // an abandoned turn must not hijack the next step
   const stale = plan(o(), Array.from({ length: 9 }, (_, i) => `s${i}`), t0 - 5 * 60 * MS)
