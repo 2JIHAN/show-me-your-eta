@@ -221,10 +221,16 @@ TXT
 exit 0
 ```
 
-밀어 넣는 건 텍스트일 뿐입니다. 스킬에 같이 딸려 오는 `hooks/eta-gate.js`가 계획 없는 입력의 첫
-`Edit`·`Write`를 한 번 막습니다. 한 번뿐이고, 재시도는 어느 쪽이든 통과합니다.
+밀어 넣는 건 텍스트일 뿐입니다. 스킬에 같이 딸려 오는 `hooks/eta-gate.js`가 턴의 양 끝을 잡습니다.
+계획 없는 입력의 첫 `Edit`·`Write`를 한 번 막고 — 한 번뿐이고 재시도는 어느 쪽이든 통과합니다 —
+턴이 끝날 때 빠뜨린 `done`을 물어봅니다. `plan`은 돌았는데 그 내용이 답변에 안 들어갔으면 답변을
+한 번 돌려보냅니다. 다 재놓고 아무것도 안 적은 턴은, 보는 쪽에서는 스킬을 건너뛴 턴과 똑같이 읽히거든요.
 
-`.claude/settings.json`에 둘 다 등록합니다.
+게이트를 여는 건 로그에 남은 턴이지, 계획처럼 생긴 명령줄이 아닙니다. 검사는 명령이 **끝난 뒤**에
+돌기 때문에, 스텝 이름이 없어서 `eta.js`가 거부한 `plan`은 아무것도 열지 못합니다. 그리고 찾는
+턴은 이 세션이 연 턴입니다 — 같은 프로젝트에서 일하는 다른 에이전트가 내 편집을 통과시킬 수 없습니다.
+
+`.claude/settings.json`에 네 이벤트를 모두 등록합니다.
 
 ```json
 {
@@ -236,7 +242,17 @@ exit 0
       ] }
     ],
     "PreToolUse": [
-      { "matcher": "Edit|Write|Bash", "hooks": [
+      { "matcher": "Edit|Write", "hooks": [
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
+    ],
+    "Stop": [
+      { "hooks": [
         { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
       ] }
     ]
@@ -281,14 +297,17 @@ exit 0
 
 ## 고치고 싶다면
 
-의존성 없는 node 스크립트 하나와 스킬 파일 하나가 전부입니다.
+의존성 없는 node 스크립트 둘과 스킬 파일 하나가 전부입니다.
 
 ```bash
 node turn-eta/scripts/eta.js --selftest
+node turn-eta/hooks/eta-gate.js --selftest
 ```
 
-경로 잡기, 프로바이더·모델 폴더 분기, 사다리 각 단, 스텝별 시간 재기, 버려진 턴 걸러내기, 공용 기록
-빌려 쓰기를 덮습니다. 테스트 도구는 쓰지 않습니다. 이슈와 PR 환영합니다.
+앞쪽은 경로 잡기, 프로바이더·모델 폴더 분기, 사다리 각 단, 스텝별 시간 재기, 버려진 턴 걸러내기,
+공용 기록 빌려 쓰기를 덮습니다. 뒤쪽은 무엇이 게이트를 열고 무엇이 열지 못하는지, 한 세션의 턴이
+다른 세션의 게이트를 열지 않는지, 빠뜨린 `done`을 묻는지를 덮습니다. 테스트 도구는 쓰지 않습니다.
+이슈와 PR 환영합니다.
 
 ## 라이선스
 

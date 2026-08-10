@@ -219,10 +219,18 @@ TXT
 exit 0
 ```
 
-A reminder is only text. `hooks/eta-gate.js` ships with the skill and stops the first `Edit` or
-`Write` of a prompt while no plan exists — once, and the retry goes through either way.
+A reminder is only text. `hooks/eta-gate.js` ships with the skill and holds the turn to it at both
+ends. It stops the first `Edit` or `Write` of a prompt while no plan exists — once, and the retry
+goes through either way. At the end of the turn it asks for the missing `done`, and sends the reply
+back once if the plan ran and never reached you: a turn that measures everything and prints none of
+it reads, from where you sit, exactly like a turn that skipped the skill.
 
-Register both in `.claude/settings.json`:
+What satisfies it is a turn in the log, not a command line that looks like a plan. The check runs
+*after* the command, so a `plan` eta.js refused for having no step names opens nothing. And the turn
+it looks for is the one this session opened: another agent working in the same project cannot wave
+your edits through.
+
+Register all four events in `.claude/settings.json`:
 
 ```json
 {
@@ -234,7 +242,17 @@ Register both in `.claude/settings.json`:
       ] }
     ],
     "PreToolUse": [
-      { "matcher": "Edit|Write|Bash", "hooks": [
+      { "matcher": "Edit|Write", "hooks": [
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
+      ] }
+    ],
+    "Stop": [
+      { "hooks": [
         { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/skills/turn-eta/hooks/eta-gate.js\"" }
       ] }
     ]
@@ -280,14 +298,17 @@ commands you type are the install and, if you contribute, the self-test.
 
 ## Contributing
 
-One dependency-free Node script and one skill file. To check a change:
+Two dependency-free Node scripts and one skill file. To check a change:
 
 ```bash
 node turn-eta/scripts/eta.js --selftest
+node turn-eta/hooks/eta-gate.js --selftest
 ```
 
-Covers path handling, the provider/model split, every rung of the ladder, per-step timing, and the
-shared-log fallback. No test framework. Issues and pull requests welcome.
+The first covers path handling, the provider/model split, every rung of the ladder, per-step timing,
+and the shared-log fallback. The second covers what does and does not open the gate, one session's
+turn not opening another's, and the missing-`done` question. No test framework. Issues and pull
+requests welcome.
 
 ## License
 
