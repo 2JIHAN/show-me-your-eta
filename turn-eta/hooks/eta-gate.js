@@ -8,9 +8,14 @@
 // skip `plan` outright, or call it and never call `done` — both of which read, from the outside,
 // exactly like the skill never ran. Three events, three questions:
 //
-//   PreToolUse  (Edit|Write)  is there a plan for this prompt yet? stop once if not.
+//   PreToolUse  (Edit|Write)  has this prompt grown past a touch-up with no plan? stop once if so.
 //   PostToolUse (Bash)        did `plan` actually open a turn? only that satisfies the gate.
 //   Stop                      was that turn closed, and did the reply ever show it? ask once if not.
+//
+// The first one used to fire on the first edit of every prompt, which made a one-line fix cost a
+// blocked call and a retry — noise on exactly the turns the skill says to skip. An estimate is worth
+// asking for once a turn is actually long, so that is what is measured: how long the prompt has been
+// running, and how many files it has changed. Under both thresholds the gate stays out of the way.
 //
 // The last one is the other half of the same hole: `plan` ran and its output never reached the user.
 // From the outside that is indistinguishable from a turn that skipped the skill, and no tool call
@@ -66,20 +71,27 @@ const RUNNING_MS = 20 * MS
 const PLAN_MS = 30 * 1000
 const PRUNE_MS = 24 * 60 * MS // gate files from yesterday's sessions
 
+// When a prompt stops being a touch-up. Either signal alone is enough: a turn can be long without
+// touching many files (a build, a browser run, reading around) or short but broad (a rename across
+// four files). Both are past the point where "how long will this take" is worth a sentence.
+const WORK_MS = 3 * MS // still editing this long after the prompt arrived
+const WORK_EDITS = 4 // the fourth file change of one prompt
+
 // A cheap prefilter, not the test. The log is what decides — so this can afford to be loose, and
 // has to be: a `plan` split across lines with a backslash is still a plan.
 const PLAN_CMD = /eta\.js[\s\S]*\bplan\b/
 const TURN_ID = /turn id:\s*([a-z0-9]{4,16})/i
 
-const REASON = [
-  'No plan for this prompt yet. Before touching files, say which kind of turn this is.',
-  '',
-  '- More than one step → run `eta.js plan "…" "…"` first, then open your reply with what it',
-  '  prints, in that order: the **ETA …** line, then the numbered steps.',
-  '- A one-line touch-up → just try the edit again. The second attempt goes through.',
-  '',
-  'This stops you once per prompt, never twice.',
-].join('\n')
+const REASON = (why) =>
+  [
+    `This prompt is past a touch-up — ${why} — and no plan was opened for it.`,
+    '',
+    '- Work still ahead → run `eta.js plan "…" "…"` now, and put what it prints at the top of your',
+    '  reply, in that order: the **ETA …** line, then the numbered steps.',
+    '- Nearly done → just try the edit again. The second attempt goes through.',
+    '',
+    'This stops you once per prompt, never twice.',
+  ].join('\n')
 
 const UNCLOSED = (id) =>
   [
@@ -126,18 +138,21 @@ const gateFile = (root, sid) => path.join(gateDir(root), slug(sid))
 // The gate file carries the turn this session opened, not just a word. Without the id, "is a plan
 // running?" can only be answered for the whole project — and then one agent's open turn waves every
 // other agent's edits straight through.
+// It also carries how big the prompt has grown: when it arrived, and how many files it has changed
+// since. Neither can be recovered afterwards — the log only knows about turns that were planned, and
+// an unplanned prompt is exactly the case being measured.
 function readGate(file) {
   try {
-    const [state, id] = fs.readFileSync(file, 'utf8').trim().split('\t')
-    return { state: state || null, id: id || null }
+    const [state, id, at, edits] = fs.readFileSync(file, 'utf8').trim().split('\t')
+    return { state: state || null, id: id || null, at: Number(at) || 0, edits: Number(edits) || 0 }
   } catch {
-    return { state: null, id: null }
+    return { state: null, id: null, at: 0, edits: 0 }
   }
 }
 
-function writeGate(file, state, id) {
+function writeGate(file, state, id, at, edits) {
   fs.mkdirSync(path.dirname(file), { recursive: true })
-  fs.writeFileSync(file, (id ? `${state}\t${id}` : state) + '\n')
+  fs.writeFileSync(file, [state, id || '', at || '', edits || ''].join('\t').replace(/\t+$/, '') + '\n')
 }
 
 function prune(dir, now) {
@@ -286,7 +301,7 @@ function decide(input, now = Date.now()) {
     const g = readGate(file)
     const mine = (g.state === PLANNED || g.state === ASKED_DONE) && openTurn(root, g.id)
     if (mine && now - mine.start < RUNNING_MS) writeGate(file, PLANNED, g.id)
-    else writeGate(file, PENDING)
+    else writeGate(file, PENDING, null, now, 0)
     return null
   }
 
@@ -323,10 +338,25 @@ function decide(input, now = Date.now()) {
 
   // No file means UserPromptSubmit never ran. Blocking then would wedge the session with nothing
   // able to clear it, so an uninstalled half is the same as no gate at all.
-  if (readGate(file).state !== PENDING) return null
+  const g = readGate(file)
+  if (g.state !== PENDING) return null
+
+  const edits = g.edits + 1
+  const elapsed = g.at ? now - g.at : 0
+  const why =
+    edits >= WORK_EDITS
+      ? `${edits} file changes`
+      : elapsed >= WORK_MS
+        ? `${Math.round(elapsed / MS)} minutes in and still editing`
+        : null
+  // Still small. Count it and stay out of the way — this is the case the old gate got wrong.
+  if (!why) {
+    writeGate(file, PENDING, null, g.at, edits)
+    return null
+  }
 
   writeGate(file, BLOCKED)
-  return { kind: 'deny', reason: REASON }
+  return { kind: 'deny', reason: REASON(why) }
 }
 
 function main() {
@@ -387,6 +417,13 @@ function selftest() {
     )
   const stop = (at = t0, s = sid, active = false) =>
     decide({ hook_event_name: 'Stop', session_id: s, stop_hook_active: active }, at)
+  // What the gate does once a prompt has outgrown a touch-up. Four file changes is the quick way
+  // there; the tests below are about what counts as a plan, not about where the threshold sits.
+  const grown = (at = t0, s = sid) => {
+    let out = null
+    for (let i = 0; i < WORK_EDITS; i++) out = edit(at, s)
+    return out
+  }
 
   // eta.js writes here; the tests stand in for it
   const log = path.join(root, '.eta', 'anthropic', 'claude-opus-5', 'log.tsv')
@@ -401,16 +438,35 @@ function selftest() {
   // no state file yet — an uninstalled UserPromptSubmit must not wedge anything
   assert.strictEqual(edit(), null)
 
-  // the first edit of a prompt is stopped, the retry is not
+  // --- a touch-up is never interrupted ---
+
+  // one edit, seconds after the prompt: nothing to say
   prompt()
-  assert.ok(edit().reason.startsWith('No plan for this prompt yet.'))
-  assert.strictEqual(edit(), null)
+  assert.strictEqual(edit(t0 + 4000), null)
+  assert.strictEqual(edit(t0 + 9000), null, 'a second file is still a touch-up')
+  assert.strictEqual(edit(t0 + 15000), null, 'and a third')
+
+  // the fourth file change of one prompt is not
+  const broad = edit(t0 + 20000)
+  assert.ok(broad && broad.reason.includes('4 file changes'), JSON.stringify(broad))
+  assert.strictEqual(edit(t0 + 25000), null, 'stopped once, never twice')
+
+  // a prompt still editing minutes later is asked too, however few files it touched
+  prompt(sid, t0 + MS)
+  assert.strictEqual(edit(t0 + 2 * MS), null)
+  const slow = edit(t0 + 5 * MS)
+  assert.ok(slow && slow.reason.includes('minutes in'), JSON.stringify(slow))
+  assert.strictEqual(edit(t0 + 6 * MS), null)
+
+  // the clock starts at the prompt, not at the session — a fresh prompt is a fresh touch-up
+  prompt(sid, t0 + 10 * MS)
+  assert.strictEqual(edit(t0 + 10 * MS + 5000), null)
 
   // a prompt whose `plan` actually opened a turn is never stopped
   clearLog()
   prompt()
   planned('aaa')
-  assert.deepStrictEqual(readGate(gateFile(root, sid)), { state: PLANNED, id: 'aaa' })
+  assert.deepStrictEqual(readGate(gateFile(root, sid)), { state: PLANNED, id: 'aaa', at: 0, edits: 0 })
   assert.strictEqual(edit(), null)
 
   // --- what does NOT count as planning ---
@@ -420,21 +476,21 @@ function selftest() {
   prompt()
   assert.strictEqual(ran('ls -la && grep -rn eta.js .', { stdout: 'eta.js' }), null)
   assert.strictEqual(readGate(gateFile(root, sid)).state, PENDING)
-  assert.ok(edit(), 'a grep is not a plan')
+  assert.ok(grown(), 'a grep is not a plan')
 
   // a command that merely names both words writes no turn, so it opens nothing
   clearLog()
   prompt()
   ran('cat x/eta.js | head -40   # what does plan print?', { stdout: 'const PLAN = 1' })
   assert.strictEqual(readGate(gateFile(root, sid)).state, PENDING, 'a cat is not a plan')
-  assert.ok(edit())
+  assert.ok(grown())
 
   // a `plan` eta.js refused leaves no row behind, and so leaves the gate shut
   clearLog()
   prompt()
   ran('node x/eta.js plan 3 4', { stdout: '', stderr: 'plan needs the steps by name' })
   assert.strictEqual(readGate(gateFile(root, sid)).state, PENDING, 'a refused plan is not a plan')
-  assert.ok(edit())
+  assert.ok(grown())
 
   // someone else's open turn is not this session's plan
   clearLog()
@@ -442,7 +498,7 @@ function selftest() {
   prompt()
   ran('node x/eta.js plan "a" "b"', { stdout: 'error' })
   assert.strictEqual(readGate(gateFile(root, sid)).state, PENDING, 'an older open turn is not this call')
-  assert.ok(edit())
+  assert.ok(grown())
 
   // a plan split across lines still counts — the log decides, not the shape of the command
   clearLog()
@@ -457,21 +513,21 @@ function selftest() {
   writeLog(row('aaa', t0 - MS, 'open')) // another agent planned a minute ago and is still working
   for (const other of ['sess-2', 'sess-3']) {
     prompt(other)
-    assert.ok(edit(t0, other), `${other} is not covered by another session's open turn`)
+    assert.ok(grown(t0, other), `${other} is not covered by another session's open turn`)
   }
   // even from another provider's log
   const codex = path.join(root, '.eta', 'openai', 'gpt-5-codex', 'log.tsv')
   fs.mkdirSync(path.dirname(codex), { recursive: true })
   fs.writeFileSync(codex, '# header\n' + row('ccc', t0 - MS, 'open') + '\n')
   prompt('sess-4')
-  assert.ok(edit(t0, 'sess-4'), "a codex turn does not open a claude session's gate")
+  assert.ok(grown(t0, 'sess-4'), "a codex turn does not open a claude session's gate")
   fs.rmSync(codex, { force: true })
 
   // sessions do not share a gate
   clearLog()
   prompt()
   assert.strictEqual(decide({ hook_event_name: 'PreToolUse', tool_name: 'Write', session_id: 'sess-9' }, t0), null)
-  assert.ok(edit(), 'sess-1 is still pending')
+  assert.ok(grown(), 'sess-1 is still pending')
 
   // --- a mid-turn message must not interrupt this session's own plan ---
 
@@ -490,7 +546,7 @@ function selftest() {
 
   // a turn left open far past the window is not a running plan
   prompt(sid, t0 + 25 * MS)
-  assert.ok(edit(t0 + 25 * MS))
+  assert.ok(grown(t0 + 25 * MS))
 
   // a finished turn is not a running plan either
   clearLog()
@@ -498,7 +554,7 @@ function selftest() {
   planned('fff')
   writeLog(row('fff', t0, 'done'))
   prompt()
-  assert.ok(edit())
+  assert.ok(grown())
 
   // --- Stop: a turn that was opened has to be closed ---
 
