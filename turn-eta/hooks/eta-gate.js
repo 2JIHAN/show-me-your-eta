@@ -219,10 +219,28 @@ const openTurn = (root, id) => (id ? turns(root).find((t) => t.id === id && t.st
 // sending that back for "no ETA" would be asking for a number the clock already disproved.
 const SHOWN_LINE = /\*\*(ETA|FINISHED) \d{1,2}:\d{2}\*\*|\*\*예상 종료시각[^*]*\*\*/
 
+
 // Did any assistant message since the last user prompt carry it? The transcript is JSONL, one
 // message per line. Tool results arrive as user lines too, so the prompt this turn belongs to is
 // the last user line whose content is a string or plain text blocks — walking past that one would
 // let last turn's ETA vouch for this turn.
+// Is the last thing in the transcript an assistant reply? A tool result or a bare tool call means
+// the turn's own reply has not landed yet.
+function lastIsReply(lines) {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (!lines[i]) continue
+    let msg
+    try {
+      msg = JSON.parse(lines[i]).message
+    } catch {
+      continue
+    }
+    if (!msg) continue
+    return msg.role === 'assistant' && Array.isArray(msg.content) && msg.content.some((b) => b.type === 'text')
+  }
+  return false
+}
+
 function planShown(transcriptPath) {
   let lines
   try {
@@ -230,6 +248,12 @@ function planShown(transcriptPath) {
   } catch {
     return true // no transcript to read — never hold a turn open over a file we cannot open
   }
+  // The reply this hook is judging reaches the transcript around the moment Stop fires, so the file
+  // often ends mid-turn — last line a tool result, the reply itself not written yet. Reading that as
+  // "never shown" sends the model back to reprint an answer the reader already has, which is the
+  // noise this hook exists to prevent. So the last message decides whether there is anything to
+  // judge: no written reply, nothing to fault.
+  if (!lastIsReply(lines)) return true
   for (let i = lines.length - 1; i >= 0; i--) {
     if (!lines[i]) continue
     let msg
