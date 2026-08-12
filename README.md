@@ -221,7 +221,7 @@ exit 0
 
 A reminder is only text. `hooks/eta-gate.js` ships with the skill and holds the turn to it at both
 ends. It stops an `Edit` or `Write` once a prompt has outgrown a touch-up with no plan behind it —
-three minutes in and still editing, or the fourth file change — once, and the retry goes through
+six minutes in and still editing, or the sixth file change — once, and the retry goes through
 either way. Under both marks it says nothing, so a one-line fix never pays for the reminder. It
 cannot tell a refactor from a typo before either has happened, so it waits until the turn has
 already shown which one it is. At the end of the turn it asks for the missing `done`, and sends the reply

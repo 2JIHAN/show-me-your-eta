@@ -74,8 +74,8 @@ const PRUNE_MS = 24 * 60 * MS // gate files from yesterday's sessions
 // When a prompt stops being a touch-up. Either signal alone is enough: a turn can be long without
 // touching many files (a build, a browser run, reading around) or short but broad (a rename across
 // four files). Both are past the point where "how long will this take" is worth a sentence.
-const WORK_MS = 3 * MS // still editing this long after the prompt arrived
-const WORK_EDITS = 4 // the fourth file change of one prompt
+const WORK_MS = 6 * MS // still editing this long after the prompt arrived
+const WORK_EDITS = 6 // the sixth file change of one prompt
 
 // A cheap prefilter, not the test. The log is what decides — so this can afford to be loose, and
 // has to be: a `plan` split across lines with a backslash is still a plan.
@@ -469,22 +469,24 @@ function selftest() {
   assert.strictEqual(edit(t0 + 4000), null)
   assert.strictEqual(edit(t0 + 9000), null, 'a second file is still a touch-up')
   assert.strictEqual(edit(t0 + 15000), null, 'and a third')
+  assert.strictEqual(edit(t0 + 20000), null, 'and a fourth')
+  assert.strictEqual(edit(t0 + 25000), null, 'and a fifth')
 
-  // the fourth file change of one prompt is not
-  const broad = edit(t0 + 20000)
-  assert.ok(broad && broad.reason.includes('4 file changes'), JSON.stringify(broad))
-  assert.strictEqual(edit(t0 + 25000), null, 'stopped once, never twice')
+  // the sixth file change of one prompt is not
+  const broad = edit(t0 + 30000)
+  assert.ok(broad && broad.reason.includes('6 file changes'), JSON.stringify(broad))
+  assert.strictEqual(edit(t0 + 35000), null, 'stopped once, never twice')
 
   // a prompt still editing minutes later is asked too, however few files it touched
   prompt(sid, t0 + MS)
-  assert.strictEqual(edit(t0 + 2 * MS), null)
-  const slow = edit(t0 + 5 * MS)
+  assert.strictEqual(edit(t0 + 4 * MS), null)
+  const slow = edit(t0 + 8 * MS)
   assert.ok(slow && slow.reason.includes('minutes in'), JSON.stringify(slow))
-  assert.strictEqual(edit(t0 + 6 * MS), null)
+  assert.strictEqual(edit(t0 + 9 * MS), null)
 
   // the clock starts at the prompt, not at the session — a fresh prompt is a fresh touch-up
-  prompt(sid, t0 + 10 * MS)
-  assert.strictEqual(edit(t0 + 10 * MS + 5000), null)
+  prompt(sid, t0 + 14 * MS)
+  assert.strictEqual(edit(t0 + 14 * MS + 5000), null)
 
   // a prompt whose `plan` actually opened a turn is never stopped
   clearLog()
